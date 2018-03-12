@@ -1,6 +1,10 @@
 #!/usr/bin/env php
 <?php
 
+$time_start = time();
+
+exec('clear');
+
 echo "\n";
 
 // This is where cli settings things are: $argv
@@ -37,16 +41,19 @@ if(file_exists($script_path . 'config.json')) {
 		}
 	} else {
 		$config = false;
-		echo "+ Could not load config. Using defaults.\n";
+		echo "+ Could not load config.\n";
 	}	
 } else {
 	$config = false;
-	echo "+ No config file found. Using defaults.\n";
+	echo "+ No config file found.\n";
 }
 
-if($config) {
+if(is_object($config)) {
 	echo "+ Applying configuration.\n";
 	$config = config_apply($config, $config_default);
+} else if($config === false) {
+	echo "+ Using default configuration.\n";
+	$config = $config_default;
 }
 
 echo "\n";
@@ -65,10 +72,75 @@ for($count_down = 3; $count_down > 0; $count_down--) {
 echo "Ok, here we go.                    \n\n";
 sleep(1);
 
+echo "Searching for likely WordPress installs...\n\n";
+
+
+$exec = $config->executables;
+$paths = $config->paths;
+
 exec(
-	$config->find . ' ' . escapeshellarg(substr($config->sites, 0, -1)) . 
+	$exec->find . ' ' . escapeshellarg(substr($paths->sites, 0, -1)) . 
 		' -name "wp-config.php"',
-	$files
+	$wp_config_locations
 );
 
-var_dump($files);
+if($config->include) {
+	foreach($config->include as $include_path) {
+		exec(
+			$exec->find . ' ' . escapeshellarg(substr($include_path, 0, -1)) . 
+				' -name "wp-config.php"',
+			$wp_extra_locations
+		);
+		
+		$wp_config_locations = array_merge(
+				$wp_config_locations, 
+				$wp_extra_locations
+			);
+	}
+}
+
+$wp_upgrades = array();
+$wp_no_upgrades = array();
+
+foreach($wp_config_locations as $wp_config_location) {
+	if(
+		is_readable($wp_config_location) &&
+		is_writable($wp_config_location)
+	) {
+		$keep = true;
+		foreach($config->exclude as $exclude) {
+			if(strpos($wp_config_location, $exclude) === 0) {
+				$keep = false;
+			}
+		}
+		
+		if($keep) {
+			$wp_upgrades[] = dirname($wp_config_location);
+		} else {
+			$wp_no_upgrades[] = 'Excluded: ' . dirname($wp_config_location);
+		}
+	} else {
+		$wp_no_upgrades[] = 'Not Writable: ' . dirname($wp_config_location);
+	}
+}
+
+if($wp_upgrades) {
+	echo "\n";
+	echo "Will attempt to upgrade:\n";
+	foreach($wp_upgrades as $wp_upgrade) {
+		echo "+ {$wp_upgrade}\n";
+	}
+}
+
+if($wp_no_upgrades) {
+	echo "\n";
+	echo "Will not attempt to upgrade:\n";
+	foreach($wp_no_upgrades as $wp_upgrade) {
+		echo "+ {$wp_upgrade}\n";
+	}
+}
+
+
+echo "\n\n--------------\n\n";
+echo "Done at " . date('Y-m-d H:i:s') . " after " . (time() - $time_start) . " seconds.";
+echo "\n\n";

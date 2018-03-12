@@ -1,8 +1,10 @@
 {
-	"executables": {
-		"mysqldump" : "/tmp/mysqldump"
-	},
-	"paths": {
-		"sites" : "/tmp/my-sites/"	
-	}
+	"include": [
+		"/Users/robert/Desktop/tmp",
+		"/fake/path/1/"
+	],
+	"exclude": [
+		"/Users/robert/Desktop/tmp/leadershipbirmingham.dev",
+		"/fake/path/2/"
+	]
 }

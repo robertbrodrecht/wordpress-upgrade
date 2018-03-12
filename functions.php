@@ -137,27 +137,117 @@ function shell_which($program = false) {
 
 
 function config_apply($file, $defaults) {
+	if(!isset($file->modifications)) {
+		$file->_modifications = array();
+	}
+	
 	if(!isset($file->executables)) {
 		$file->executables = $defaults->executables;
+		$file->_modifications[] = 'No executables listed. Using defaults.';
 	}
 	
 	foreach($defaults->executables as $name => $value) {
-		if(!isset($file->executables->$name)) {
+		if(
+			!isset($file->executables->$name) ||
+			!file_exists($file->executables->$name) || 
+			!is_executable($file->executables->$name)
+		) {
 			$file->executables->$name = $value;
+			$file->_modifications[] = "{$name} using default: {$value}";
 		}
 	}
 	
-	foreach($defaults as $top_keys => $top_values) {
-		if(!isset($file->$top_keys)) {
-			$file->$top_keys = $top_values;
+	if(!isset($file->paths)) {
+		$file->paths = $defaults->paths;
+		$file->_modifications[] = 'No paths listed. Using defaults.';
+	}
+	
+	foreach($defaults->paths as $name => $value) {
+		
+		if(!isset($file->paths->$name)) {
+			$file->paths->$name = $value;
+			$file->_modifications[] = "Path {$name} using default: {$value}";
+		} else if(
+			is_file($file->paths->$name) && !is_dir($file->paths->$name)
+		) {
+			$file->paths->$name = dirname($file->paths->$name) . '/';
+		} else if(substr($file->paths->$name, -1) !== '/') {
+			$file->_modifications[] = "{$file->paths->$name} to " . 
+				"{$file->paths->$name}/";
+			$file->paths->$name = $value . '/';
 		}
 		
-		foreach($top_values as $sub_keys => $sub_values) {
-			if(!isset($file->$top_keys->$sub_keys)) {
-				$file->$top_keys->$sub_keys = $sub_values;
+		if(!file_exists($file->paths->$name)) {
+			if(
+				is_writable(dirname($file->paths->$name)) &&
+				mkdir($file->paths->$name)
+			) {
+				$file->_modifications[] = "Created folder " . 
+					"{$file->paths->$name}";
+			} else {
+				$file->_modifications[] = "{$file->paths->$name} can't be " . 
+					"created using default {$file->paths->$name}";
+				$file->paths->$name = $value;
 			}
 		}
+		
+		if(!file_exists($file->paths->$name)) {
+			mkdir($file->paths->$name);
+		}
 	}
+	
+	if($file->include) {
+		$keep_includes = array();
+		
+		if(!is_array($file->include)) {
+			$file->include = array($file->include);
+		}
+		
+		foreach($file->include as $value) {
+			if($value && file_exists($value) && is_writable($value)) {
+				if(!is_dir($value)) {
+					$value = dirname($value) . '/';
+				}
+				if(substr($value, -1) !== '/') {
+					$file->_modifications[] = "Include {$value} to {$value}/";
+					$value = $value . '/';
+				}
+				$keep_includes[] = $value;
+			} else {
+				$file->_modifications[] = "Removing unusable " . 
+					"include '{$value}'";
+			}
+		}
+		
+		$file->include = $keep_includes;
+	}
+	
+	if($file->exclude) {
+		$keep_excludes = array();
+		
+		if(!is_array($file->exclude)) {
+			$file->exclude = array($file->exclude);
+		}
+		
+		foreach($file->exclude as $value) {
+			if(file_exists($value) && !is_dir($value)) {
+				$value = pathinfo($value, PATHINFO_DIRNAME) . '/';
+			} else if(substr($value, -1) !== '/') {
+				$file->_modifications[] = "Exclude {$value} to {$value}/";
+				$value = $value . '/';
+			}
+			
+			if(file_exists($value) && is_dir($value)) {
+				$keep_excludes[] = $value;
+			} else {
+				$file->_modifications[] = "Removing unusable " . 
+					"exclude '{$value}'";
+			}
+		}
+		
+		$file->exclude = $keep_excludes;
+	}
+	
 	return $file;
 }
 
