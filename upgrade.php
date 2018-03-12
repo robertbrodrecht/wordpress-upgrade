@@ -24,40 +24,49 @@ $config_default = (object) array(
 	)
 );
 
-var_dump($config_default);
-exit();
-
-$config = @file_get_contents($script_path . 'config.json');
-$config = @json_decode($config);
-
-if(!$config) {
-	$config = (object) array();
+echo "Loading config...\n";
+if(file_exists($script_path . 'config.json')) {
+	$config = @file_get_contents($script_path . 'config.json');
+	if($config) {
+		$config = @json_decode($config);
+		if($config) {
+			echo "+ Config loaded.\n";
+		} else {
+			echo "+ Could not parse config. Check your syntax.\n\n";
+			exit();
+		}
+	} else {
+		$config = false;
+		echo "+ Could not load config. Using defaults.\n";
+	}	
+} else {
+	$config = false;
+	echo "+ No config file found. Using defaults.\n";
 }
 
-echo '<pre style="line-height: 1; padding: 10px; background: #EEE; color: #333;">';
-var_dump($config);
-echo '</pre>';
+if($config) {
+	echo "+ Applying configuration.\n";
+	$config = config_apply($config, $config_default);
+}
 
-// die('Apply the config doesn\'t work right.');
+echo "\n";
+echo "Here are your settings.  Please verify:\n";
+echo str_replace('\/', '/', json_encode($config, JSON_PRETTY_PRINT));
+echo "\n\n";
+for($count_down = 3; $count_down > 0; $count_down--) {
+	echo 'Starting in ';
+	if($count_down < 10) {
+		echo '0';
+	}
+	echo "{$count_down} seconds...\r";
+	sleep(1);
+}
 
-var_dump($config);
-
-$config = config_apply(
-		$config,
-		(object) array(
-			'mysqldump' => $mysqldump,
-			'tar' => $tar,
-			'find' => $find,
-			'sites' => $sites_path,
-			'backups' => $backup_path,
-			'wordpress' => $wordpress_path
-		)
-	);
-
-var_dump($config);
+echo "Ok, here we go.                    \n\n";
+sleep(1);
 
 exec(
-	$find . ' ' . escapeshellarg(substr($sites_path, 0, -1)) . 
+	$config->find . ' ' . escapeshellarg(substr($config->sites, 0, -1)) . 
 		' -name "wp-config.php"',
 	$files
 );

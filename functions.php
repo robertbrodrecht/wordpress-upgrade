@@ -135,10 +135,27 @@ function shell_which($program = false) {
 	return $result ? $result : false;
 }
 
+
 function config_apply($file, $defaults) {
-	foreach($defaults as $k => $v) {
-		if(!isset($file->$k)) {
-			$file->$k = $v;
+	if(!isset($file->executables)) {
+		$file->executables = $defaults->executables;
+	}
+	
+	foreach($defaults->executables as $name => $value) {
+		if(!isset($file->executables->$name)) {
+			$file->executables->$name = $value;
+		}
+	}
+	
+	foreach($defaults as $top_keys => $top_values) {
+		if(!isset($file->$top_keys)) {
+			$file->$top_keys = $top_values;
+		}
+		
+		foreach($top_values as $sub_keys => $sub_values) {
+			if(!isset($file->$top_keys->$sub_keys)) {
+				$file->$top_keys->$sub_keys = $sub_values;
+			}
 		}
 	}
 	return $file;
