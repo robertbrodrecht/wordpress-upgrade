@@ -1,0 +1,8 @@
+{
+	"mysqldump" : "/tmp/mysqldump",
+	"tar" : "/tmp/tar",
+	"find" : "/tmp/find",
+	"sites" : "/tmp/my-sites/",
+	"backups" : "/tmp/my-backups/",
+	"wordpress" : "/tmp/my-wp/"
+}
