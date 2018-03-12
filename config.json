@@ -1,8 +1,12 @@
 {
-	"mysqldump" : "/tmp/mysqldump",
-	"tar" : "/tmp/tar",
-	"find" : "/tmp/find",
-	"sites" : "/tmp/my-sites/",
-	"backups" : "/tmp/my-backups/",
-	"wordpress" : "/tmp/my-wp/"
+	"executables": {
+		"mysqldump" : "/tmp/mysqldump",
+		"tar" : "/tmp/tar",
+		"find" : "/tmp/find"
+	},
+	"paths": {
+		"sites" : "/tmp/my-sites/",
+		"backups" : "/tmp/my-backups/",
+		"wordpress" : "/tmp/my-wp/"	
+	}
 }

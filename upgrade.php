@@ -9,17 +9,23 @@ include 'functions.php';
 
 set_time_limit(0);
 
-// THIS SHOULD BE LOADED INTO A DEFAULT CONFIG OBJECT
-// THEN LATER EXTRACTED
-
-$mysqldump = shell_which('mysqldump');
-$tar = shell_which('tar');
-$find = shell_which('find');
-
 $script_path = dirname(__FILE__) . '/';
-$sites_path = dirname($script_path) . '/';
-$backup_path = $script_path . 'backups/';
-$wordpress_path = $script_path . 'wordpress/';
+
+$config_default = (object) array(
+	'executables' => (object) array(
+		'mysqldump' => shell_which('mysqldump'),
+		'tar' => shell_which('tar'),
+		'find' => shell_which('find')
+	),
+	'paths' => (object) array(
+		'sites' => dirname($script_path) . '/',
+		'backups' => $script_path . 'backups/',
+		'wordpress' => $script_path . 'wordpress/'
+	)
+);
+
+var_dump($config_default);
+exit();
 
 $config = @file_get_contents($script_path . 'config.json');
 $config = @json_decode($config);
