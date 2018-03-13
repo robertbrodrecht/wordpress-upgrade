@@ -423,6 +423,27 @@ function cli_countdown($seconds = false, $final = false, $string = '%d second%s 
 }
 
 
-global $argv;
-
-
+function diff_html($before = '', $after = '') {
+	$before = preg_replace('/ver=.*?\'/', '', $before);
+	$after = preg_replace('/ver=.*?\'/', '', $after);
+	
+	$before = preg_replace('/\s+/', ' ', $before);
+	$after = preg_replace('/\s+/', ' ', $after);
+	
+	$before = preg_replace('/[\r\n]/', '', $before);
+	$after = preg_replace('/[\r\n]/', '', $after);
+	
+	$before = str_replace(">", ">\n", $before);
+	$after = str_replace(">", ">\n", $after);		
+	
+	$before_tmp = explode("\n", $before);
+	$after_tmp = explode("\n", $after);
+	
+	foreach($before_tmp as $line_number => $line) {
+		if(trim($line) !== trim($after_tmp[$line_number])) {
+			return array(trim($line), trim($after_tmp[$line_number]));
+		}
+	}
+	
+	return false;
+}

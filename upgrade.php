@@ -29,7 +29,8 @@ $config_default = (object) array(
 		'tar' => shell_which('tar'),
 		'find' => shell_which('find'),
 		'curl' => shell_which('curl'),
-		'du' => shell_which('du')
+		'du' => shell_which('du'),
+		'cp' => shell_which('cp')
 	),
 	'paths' => (object) array(
 		'sites' => dirname($script_path) . '/',
@@ -65,6 +66,12 @@ if(is_object($config)) {
 	echo "+ Using default configuration.\n";
 	$config = $config_default;
 }
+
+if(!$config->exclude) {
+	$config->exclude = array();
+}
+
+$config->exclude[] = $config->paths->wordpress;
 
 $exec = $config->executables;
 $paths = $config->paths;
@@ -244,6 +251,10 @@ $counter = 1;
 $total = count($wp_upgrades);
 $time_upgrade = time();
 
+$success = array();
+$failure = array();
+$verify = array();
+
 foreach($wp_upgrades as $wp_upgrade) {
 	echo "\n\n" . str_repeat('-', 80) . "\n\n";
 	
@@ -262,14 +273,11 @@ foreach($wp_upgrades as $wp_upgrade) {
 	fwrite($conf_file, "host={$wp_db->host}\n");
 	fclose($conf_file);
 	
+	$info_query_results = false;
+	
 	$mysql_query = $exec->mysql . 
 		' --defaults-extra-file=' . 
 		escapeshellarg($paths->backups . 'tmp_config.cnf') .
-/*
-		' -u' . escapeshellarg($wp_db->user) .
-		' -p' . escapeshellarg($wp_db->pass) .
-		' -h' . escapeshellarg($wp_db->host) .
-*/
 		' ' . escapeshellarg($wp_db->name) .
 		' --batch -e ' .
 		escapeshellarg(
@@ -277,13 +285,16 @@ foreach($wp_upgrades as $wp_upgrade) {
 			"'siteurl' or option_name = 'blogname';"
 		);
 	
-	exec($mysql_query, $results);
+	@exec($mysql_query, $info_query_results);
 	
 	$blogname = 'Unknown';
-	$file_name = str_replace('/', '-', $wp_upgrade_pretty);
+	$site_full_url = false;
+	$file_name = str_replace('/', '-', trim($wp_upgrade_pretty, '/'));
 	
-	if($results) {
-		foreach($results as $result) {
+	$can_dump_database = true;
+	
+	if($info_query_results) {
+		foreach($info_query_results as $result) {
 			$result = explode("\t", $result);
 			$key = trim($result[1]);
 			$value = trim($result[2]);
@@ -292,8 +303,14 @@ foreach($wp_upgrades as $wp_upgrade) {
 				$blogname = $value;
 			}
 			if($key === 'siteurl') {
+				
+				if(!preg_match('/^https?:\/\//', $value)) {
+					$value = 'http://' . $value . '/';
+				}
+				
+				$site_full_url = $value;
 				$site_url = parse_url($value, PHP_URL_HOST);
-				$site_path = trim(parse_url($value, PHP_URL_PATH));
+				$site_path = trim(parse_url($value, PHP_URL_PATH), '/');
 				
 				if($site_path && $site_path != '/') {
 					$site_path = trim($site_path, '/');
@@ -304,33 +321,144 @@ foreach($wp_upgrades as $wp_upgrade) {
 				$file_name = $site_url . $site_path;
 			}
 		}
+	} else {
+		$blogname = $file_name;
+		$can_dump_database = false;
 	}
 	
+	$backp_db_success = false;
+	$backp_files_success = false;
+	
 	echo "{$blogname}\n";
-	echo "✓ Save File Name Base: {$file_name}\n";
+	echo "✓ URL: {$site_full_url}\n";
 	echo "✓ Path: {$wp_upgrade}\n";
 	echo "✓ Site Size: {$wp_size}\n";	
 	echo "✓ Current Version: {$wp_current_version}\n";
 	echo "✓ Latest Version: {$wp_latest}\n";
-
+	echo "✓ Save File Name Base: {$file_name}\n";
+	
+	if(!$can_dump_database) {
+		echo "\n";
+		echo "Can't connect to database.  Aborting.";
+		$failure[] = $wp_upgrade;
+		
+		$counter++;
+		continue;
+	}
+	
+	$html_before = false;
+	$html_before_md5 = false;
+	
 	echo "\n";
 	echo "Taking HTML Snapshot...\n";
+	if($site_full_url) {
+		$html_before = @file_get_contents($site_full_url);
+		if($html_before) {
+			$html_before_md5 = md5($html_before);
+			echo "+ Snapshot signature: {$html_before_md5}\n";
+		} else {
+			echo "- Could not get snapshot from '{$site_full_url}'\n";
+		}
+	} else {
+		$html_before = false;
+		echo "- Could not determine URL due to database issues.'\n";
+	}
 	
 	echo "\n";
-	echo "Backing up...\n";
-	echo "+ Database dump...\n";
-	echo "+ Gzipping...\n";
-	echo "+ Complete.\n";
-
-	echo "\n";	
-	echo "Upgrading WordPress\n";
-	echo "+ Complete.\n";
+	echo "Backing up database...\n";
+	$mysql_dump_output = $paths->backups . $file_name . '.sql';
+	$mysql_dump = $exec->mysqldump . 
+		' --defaults-extra-file=' . 
+		escapeshellarg($paths->backups . 'tmp_config.cnf') .
+		' ' . escapeshellarg($wp_db->name) .
+		' > ' .
+		escapeshellarg($mysql_dump_output);
+	
+	@exec($mysql_dump, $mysql_dump_results);
+	
+	if(file_exists($mysql_dump_output) && filesize($mysql_dump_output)) {
+		$backp_db_success = true;
+		echo "+ Done.\n";	
+	} else {
+		echo "- Database backup failed.\n";
+	}
 	
 	echo "\n";
-	echo "Comparing HTML Snapshot...\n";
-	echo "+ No Differences.\n";
+	echo "Backing up files...\n";
 	
-	$percent_complete = round($counter/$total*100);
+	$folder_name = str_replace(dirname($wp_upgrade), '', $wp_upgrade);
+	$folder_name = trim($folder_name, '/');
+	
+	$tar_results = false;
+	
+	$tar_output = $paths->backups . $file_name . '.tar.gz';
+	$tar_command = $exec->tar . ' -C ' . 
+		escapeshellarg(dirname($wp_upgrade) . '/') .
+		' -czf ' . $tar_output . ' ' . 
+		escapeshellarg($folder_name);
+	
+	@exec($tar_command, $tar_results);
+	
+	if(file_exists($tar_output) && filesize($tar_output) > 500) {
+		$backp_files_success = true;
+		echo "+ Done.\n";
+	} else {
+		echo "- Could not perform backup.\n";
+	}
+	
+	if(!$backp_files_success || !$backp_db_success) {
+		echo "\n";
+		echo "Backup failed. Aborting upgrade.\n";
+		$failure[] = $wp_upgrade;
+		
+	} else {
+		echo "\n";	
+		echo "Upgrading WordPress\n";
+		
+		
+		$cp_results = false;
+		$cp = $exec->cp . ' -Rf ' . escapeshellarg($wordpress_gzip_output) .  
+			'* ' . escapeshellarg($wp_upgrade);
+			
+		exec($cp, $cp_results);
+		
+		var_dump($cp, $cp_results);
+		
+		echo "+ Complete.\n";
+		
+		echo "\n";
+		echo "Comparing HTML Snapshot...\n";
+		if($site_full_url && $html_before) {
+			$html_after = @file_get_contents($site_full_url);
+			$html_after_md5 = md5($html_after);
+			
+			$diff = false;
+			
+			if($html_before_md5 !== $html_after_md5) {
+				echo "+ Snapshot signatures differ.\n";
+				$diff = diff_html($html_before, $html_after);
+			}
+			
+			if($diff === false) {
+				echo "+ No Differences.\n";
+			} else {
+				echo "+ First difference starting here:\n";
+				echo "  Before: {$diff[0]}\n";
+				echo "  After: {$diff[1]}\n";
+				$verify[] = $wp_upgrade;
+			}
+			
+		} else {
+			echo "- Could not compare due to earlier snapshot failure.\n";			
+		}
+		
+		$success[] = $wp_upgrade;
+	}
+	
+	$percent_complete = round($counter / $total * 100);
+	$success_rate = round(
+			count($success) / (count($success) + count($failure)) * 100
+		);
 	$time_elapsed = (time() - $time_start);
 	$time_this_upgrade = (time() - $time_this_upgrade);
 	$avg_time = round((time() - $time_upgrade)/$counter);
@@ -339,6 +467,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 	
 	echo "Install status:\n";
 	echo "✓ Progress: {$percent_complete}%\n";
+	echo "✓ Success Rate: {$success_rate}%\n";
 	echo "✓ This Upgrade Time: $time_this_upgrade seconds\n";
 	echo "✓ Total Time Elapsed: $time_elapsed seconds\n";
 	echo "✓ Avg Time Per Upgrade: $avg_time seconds";
