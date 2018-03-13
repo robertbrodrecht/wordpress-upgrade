@@ -294,9 +294,9 @@ foreach($wp_upgrades as $wp_upgrade) {
 			}
 			if($key === 'siteurl') {
 				$site_url = parse_url($value, PHP_URL_HOST);
-				$site_path = parse_url($value, PHP_URL_PATH);
+				$site_path = trim(parse_url($value, PHP_URL_PATH));
 				
-				if($site_path != '/') {
+				if($site_path && $site_path != '/') {
 					$site_path = trim($site_path, '/');
 					$site_path = str_replace('/', '-', $site_path);
 					$site_path = '-' . $site_path;
