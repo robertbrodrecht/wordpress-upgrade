@@ -2,7 +2,7 @@
 <?php
 
 $time_start = time();
-$count_down = 1;
+$count_down = 0;
 
 echo "\n";
 
@@ -177,17 +177,24 @@ foreach($wp_config_locations as $wp_config_location) {
 		is_readable($wp_config_location) &&
 		is_writable($wp_config_location)
 	) {
-		$keep = true;
+		$no_reason = '';
 		foreach($config->exclude as $exclude) {
 			if(strpos($wp_config_location, $exclude) === 0) {
-				$keep = false;
+				$no_reason = 'Excluded';
 			}
 		}
 		
-		if($keep) {
+		$database = wp_database(dirname($wp_config_location) . '/');
+		foreach($database as $k => $v) {
+			if(!$v) {
+				$no_reason = 'Bad wp-config.php';
+			}
+		}
+		
+		if(!$no_reason) {
 			$wp_upgrades[] = dirname($wp_config_location) . '/';
 		} else {
-			$wp_no_upgrades[] = 'Excluded: ' . dirname($wp_config_location);
+			$wp_no_upgrades[] = "{$no_reason}: " . dirname($wp_config_location);
 		}
 	} else {
 		$wp_no_upgrades[] = 'Not Writable: ' . dirname($wp_config_location);
@@ -221,14 +228,15 @@ if($wp_no_upgrades) {
 echo "\nAre you onboard?  If not, press ctrl+C.\n";
 echo "\n";
 cli_countdown($count_down, 'OK, here we go.');
-echo "\n\n";
+echo "\n";
 
 foreach($wp_upgrades as $wp_upgrade) {
-	echo "\n";
+	echo "\n\n";
 	$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
 	$wp_upgrade_pretty = substr($wp_upgrade_pretty, 0, -1);
 	$wp_current_version = wp_version_local($wp_upgrade);
 	$wp_size = site_size($wp_upgrade);
+	$wp_db = wp_database($wp_upgrade);
 	
 	echo "{$wp_upgrade_pretty}\n";
 	echo "✓ Path: {$wp_upgrade}\n";
@@ -238,6 +246,13 @@ foreach($wp_upgrades as $wp_upgrade) {
 	
 	echo "\n";
 	echo "Backing up...\n";
+	echo "+ Database dump...\n";
+	echo "+ Gzipping...\n";
+
+	echo "\n";	
+	echo "+ Upgrading WordPress\n";
+	
+
 }
 
 echo "\n\n--------------\n\n";

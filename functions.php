@@ -1,6 +1,7 @@
 <?php
 
 function get_arg($arg) {
+	echo "\n\nCLI OPTIONS DO NOT WORK YET!!!\n\n";
 	return false;
 }
 
@@ -16,6 +17,55 @@ function site_size($path = false) {
 	$directory_size = $du_output_parts[0];
 	
 	return trim($directory_size);
+}
+
+
+function wp_database($site = false) {
+	if(!$site) {
+		return -1;
+	}
+	
+	$wp_conifg = $site . 'wp-config.php';
+	if(!file_exists($wp_conifg)) {
+		return -2;
+	}
+	
+	$wp_conifg = file_get_contents($wp_conifg);
+	
+	preg_match_all(
+		'/define\([\'\"](.*?)[\'\"]\,\s*[\'\"](.*?)[\'\"]\)/', 
+		$wp_conifg, 
+		$settings
+	);
+	
+	$database_name = false;
+	$database_user = false;
+	$database_password = false;
+	$database_host = false;
+	
+	foreach($settings[1] as $index => $setting_name) {
+		switch(trim($setting_name)) {
+			case 'DB_NAME':
+				$database_name = trim($settings[2][$index]);
+			break;
+			case 'DB_USER':
+				$database_user = trim($settings[2][$index]);
+			break;
+			case 'DB_PASSWORD':
+				$database_password = trim($settings[2][$index]);
+			break;
+			case 'DB_HOST':
+				$database_host = trim($settings[2][$index]);
+			break;
+		}
+	}
+	
+	return (object) array(
+			'name' => $database_name, 
+			'user' => $database_user, 
+			'pass' => $database_password, 
+			'host' => $database_host
+		);
 }
 
 
