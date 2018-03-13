@@ -230,6 +230,9 @@ echo "\n";
 cli_countdown($count_down, 'OK, here we go.');
 echo "\n";
 
+$counter = 1;
+$total = count($wp_upgrades);
+
 foreach($wp_upgrades as $wp_upgrade) {
 	echo "\n\n";
 	$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
@@ -252,7 +255,10 @@ foreach($wp_upgrades as $wp_upgrade) {
 	echo "\n";	
 	echo "+ Upgrading WordPress\n";
 	
+	$percent_complete = round($counter/$total*100);
+	echo "\nProgress: {$percent_complete}%\n\n";
 
+	$counter++;
 }
 
 echo "\n\n--------------\n\n";
