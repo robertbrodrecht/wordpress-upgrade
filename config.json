@@ -1,4 +1,10 @@
 {
-	"include": [],
-	"exclude": []
+	"include": [
+		"/Users/robert/Desktop/tmp",
+		"/fake/path/1/"
+	],
+	"exclude": [
+		"/Users/robert/Desktop/tmp/leadershipbirmingham.dev",
+		"/fake/path/2/"
+	]
 }
