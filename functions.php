@@ -1,11 +1,29 @@
 <?php
 
+function get_arg($arg) {
+	return false;
+}
+
+
+function site_size($path = false) {
+	if(!$path) {
+		return 'Unknown Size';
+	}
+	
+	$du_command = 'du -ksh ' . escapeshellarg($path);
+	$du_output = exec($du_command);
+	$du_output_parts = explode('	', $du_output);
+	$directory_size = $du_output_parts[0];
+	
+	return trim($directory_size);
+}
+
 
 function wp_version_upgradable($local = '0.0.0', $remote = false) {
 	global $wp_latest;
 	
 	if(!(float) $wp_latest) {
-		$wp_latest = wp_version_latest();
+		wp_version_latest();
 	}
 	
 	if(!(float) $remote) {
@@ -67,9 +85,9 @@ function wp_version_normalize($wp_version = false) {
 
 
 function wp_version_latest() {
-	global $wp_latest;
+	global $wp_latest, $wp_latest_url;
 	
-	if($wp_latest && $wp_latest === '0.0.0') {
+	if($wp_latest && $wp_latest !== '0.0.0') {
 		return $wp_latest;
 	}
 	
@@ -88,11 +106,13 @@ function wp_version_latest() {
 		!isset($version_data->offers) || 
 		!is_array($version_data->offers) || 
 		!isset($version_data->offers[0]) ||
-		!isset($version_data->offers[0]->version)
+		!isset($version_data->offers[0]->version) ||
+		!isset($version_data->offers[0]->packages->no_content)
 	) {
 		return -3;
 	}
 	
+	$wp_latest_url = $version_data->offers[0]->packages->no_content;
 	$wp_latest = wp_version_normalize($version_data->offers[0]->version);
 	
 	return $wp_latest;
@@ -251,6 +271,47 @@ function config_apply($file, $defaults) {
 	return $file;
 }
 
+function cli_countdown($seconds = false, $final = false, $string = '%d second%s left...') {
+	
+	$seconds = (int) $seconds;
+	
+	if(!$seconds) {
+		return;
+	}
+	
+	$pad = 0;
+	
+	if(is_string($final)) {
+		$pad = strlen($final);
+	}
+	
+	for($i = $seconds; $i > 0; $i--) {
+		$update_str = sprintf($string, $i, $i === 1 ? '' : 's');
+		if(strlen($update_str) > $pad) {
+			$pad = strlen($update_str);
+		}
+	}
+	
+	for($i = $seconds; $i > 0; $i--) {
+		echo str_pad(
+				sprintf($string, $i, $i === 1 ? '' : 's'), 
+				$pad, 
+				' ', 
+				STR_PAD_RIGHT
+			) . "\r";
+		sleep(1);
+	}
+	
+	if($final) {
+		echo str_pad($final, $pad, ' ', STR_PAD_RIGHT) . "\r";
+		sleep(1);		
+	}
+}
 
-global $wp_latest;
-$wp_latest = '4.9.4'; //wp_version_latest();
+
+global $wp_latest, $wp_latest_url;
+
+echo "\n\nIF YOU ARE GOING LIVE, DON'T FORGET TO ADJUST THE HARD CODING IN FUNCTIONS!!!\n\n";
+//wp_version_latest();
+$wp_latest = '4.9.4';
+$wp_latest_url = 'https://downloads.wordpress.org/release/wordpress-4.9.4-no-content.zip';
