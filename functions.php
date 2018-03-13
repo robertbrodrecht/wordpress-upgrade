@@ -156,13 +156,12 @@ function wp_version_latest() {
 		!isset($version_data->offers) || 
 		!is_array($version_data->offers) || 
 		!isset($version_data->offers[0]) ||
-		!isset($version_data->offers[0]->version) ||
-		!isset($version_data->offers[0]->packages->no_content)
+		!isset($version_data->offers[0]->version)
 	) {
 		return -3;
 	}
 	
-	$wp_latest_url = $version_data->offers[0]->packages->no_content;
+	$wp_latest_url = 'https://wordpress.org/latest.tar.gz';
 	$wp_latest = wp_version_normalize($version_data->offers[0]->version);
 	
 	return $wp_latest;
@@ -364,4 +363,4 @@ global $wp_latest, $wp_latest_url;
 echo "\n\nIF YOU ARE GOING LIVE, DON'T FORGET TO ADJUST THE HARD CODING IN FUNCTIONS!!!\n\n";
 //wp_version_latest();
 $wp_latest = '4.9.4';
-$wp_latest_url = 'https://downloads.wordpress.org/release/wordpress-4.9.4-no-content.zip';
+$wp_latest_url = 'https://wordpress.org/latest.tar.gz';
