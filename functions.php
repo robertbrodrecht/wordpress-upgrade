@@ -1,21 +1,74 @@
 <?php
 
-function cli_get_arg($argument = false) {
-	global $argv;
+function cli_get_arg($arg = false) {
+	$cli_options_short = '?';
+	$cli_options_long = array(
+		'clean' => 'Delete any WordPress temp files and download a new copy.',
+		'help' => 'Show this message.',
+		'no-download' => 'Disable download of new WordPress.',
+		'no-backup' => 'Do not perform backups of sites.',
+		'no-upgrade' => 'Do not perform WordPress upgrade.',
+		'package:' => 'Specify with the full URL to a WordPress gzip.',
+		'single:' => 'Specify the path to a single WordPress install to upgrade.',
+		'version:' => 'Specify with the current version number to override latest.',
+	);
 	
-	foreach($argv as $arg_index => $arg_value) {
-		if($arg_value === $argument) {
-			if(isset($argv[$arg_index+1]) && substr($argv[$arg_index+1], 0, 1) !== '-') {
-				return $argv[$arg_index+1];
-			}
-			
-			return true;
-		}
+	$cli_options_values = getopt(
+			$cli_options_short,
+			array_keys($cli_options_long)
+		);
+	
+	while(substr($arg, 0, 1) === '-') {
+		$arg = substr($arg, 1);
 	}
 	
-	return false;
+	if(isset($cli_options_values['?']) || isset($cli_options_values['help'])) {
+		echo "WordPress Upgrade\n\n";
+		echo wordwrap(
+			"Backup and ipgrade a folder full of WordPress installs with " . 
+			"one script. This is for people managing a bunch of sites on " .
+			"a server where the web user can't write.\n\n",
+			80
+		);
+		
+		echo wordwrap(
+			"A config file named config.json can be placed in the same " .
+			"folder as this script to provide some basic details, but " .
+			"the script will detect some defaults. Please check README.md.\n\n",
+			80
+		);
+		
+		echo "Usage:\n";
+		$longest = 0;
+		foreach($cli_options_long as $argument => $description) {
+			$argument = str_replace(':', ' {value}', $argument);
+			if(strlen($argument) > $longest) {
+				$longest = strlen($argument);
+			}
+		}
+		foreach($cli_options_long as $argument => $description) {
+			$argument = str_replace(':', ' {value}', $argument);
+			$argument = str_pad($argument, $longest, ' ');
+			echo "--{$argument}\t{$description}\n";
+		}
+		echo "\n\n";
+		exit();
+	}
+	
+	if($arg) {
+		if(isset($cli_options_values[$arg])) {
+			if($cli_options_values[$arg] === false) {
+				return true;
+			} else {
+				return $cli_options_values[$arg];
+			}
+		}
+		
+		return false;
+	} else {
+		return $cli_options_values;
+	}
 }
-
 
 function site_size($path = false) {
 	if(!$path) {
@@ -92,14 +145,9 @@ function wp_database($site = false) {
 
 
 function wp_version_upgradable($local = '0.0.0', $remote = false) {
-	global $wp_latest;
-	
-	if(!(float) $wp_latest) {
-		wp_version_latest();
-	}
 	
 	if(!(float) $remote) {
-		$remote = $wp_latest;
+		$remote = wp_version_latest();
 	}
 	
 	$local = wp_version_normalize($local);
@@ -157,10 +205,8 @@ function wp_version_normalize($wp_version = false) {
 
 
 function wp_version_latest() {
-	global $wp_latest, $wp_latest_url;
-	
-	if($wp_latest && $wp_latest !== '0.0.0') {
-		return $wp_latest;
+	if(cli_get_arg('version')) {
+		return wp_version_normalize(cli_get_arg('version'));
 	}
 	
 	$version_api = 'https://api.wordpress.org/core/version-check/1.7/';
@@ -183,10 +229,7 @@ function wp_version_latest() {
 		return -3;
 	}
 	
-	$wp_latest_url = 'https://wordpress.org/latest.tar.gz';
-	$wp_latest = wp_version_normalize($version_data->offers[0]->version);
-	
-	return $wp_latest;
+	return wp_version_normalize($version_data->offers[0]->version);
 }
 
 
@@ -380,9 +423,6 @@ function cli_countdown($seconds = false, $final = false, $string = '%d second%s 
 }
 
 
-global $wp_latest, $wp_latest_url, $argv;
+global $argv;
 
-echo "\n\nIF YOU ARE GOING LIVE, DON'T FORGET TO ADJUST THE HARD CODING IN FUNCTIONS!!!\n\n";
-//wp_version_latest();
-$wp_latest = '4.9.4';
-$wp_latest_url = 'https://wordpress.org/latest.tar.gz';
+
