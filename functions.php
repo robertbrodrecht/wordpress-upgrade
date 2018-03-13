@@ -60,11 +60,22 @@ function wp_database($site = false) {
 		}
 	}
 	
+	$prefix = 'wp_';
+	preg_match_all(
+		'/\$table_prefix\s*?=\s*?[\'\"](.*?)[\'\"];/', 
+		$wp_conifg,
+		$prefix_match
+	);
+	if(isset($prefix_match[1][0])) {
+		$prefix = trim($prefix_match[1][0]);
+	}
+	
 	return (object) array(
 			'name' => $database_name, 
 			'user' => $database_user, 
 			'pass' => $database_password, 
-			'host' => $database_host
+			'host' => $database_host,
+			'prefix' => $prefix
 		);
 }
 

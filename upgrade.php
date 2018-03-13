@@ -14,9 +14,11 @@ OR:
 	
 https://stackoverflow.com/questions/1602904/how-do-you-run-a-single-query-through-mysql-from-the-command-line
 
+mysql -uwww -pwww -hlocalhost vb_wordpress --batch -e "select * from wp_options where option_name = 'siteurl';"
+
 */
 
-die('Check comments');
+// die('Check comments');
 
 
 $time_start = time();
@@ -35,6 +37,7 @@ $script_path = dirname(__FILE__) . '/';
 $config_default = (object) array(
 	'executables' => (object) array(
 		'mysqldump' => shell_which('mysqldump'),
+		'mysql' => shell_which('mysql'),
 		'tar' => shell_which('tar'),
 		'find' => shell_which('find'),
 		'curl' => shell_which('curl'),
@@ -264,7 +267,48 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$wp_size = site_size($wp_upgrade);
 	$wp_db = wp_database($wp_upgrade);
 	
-	echo "{$wp_upgrade_pretty}\n";
+	$mysql_query = $exec->mysql . 
+		' -u' . escapeshellarg($wp_db->user) .
+		' -p' . escapeshellarg($wp_db->pass) .
+		' -h' . escapeshellarg($wp_db->host) .
+		' ' . escapeshellarg($wp_db->name) .
+		' --batch -e ' .
+		escapeshellarg(
+			"select * from {$wp_db->prefix}options where option_name = " . 
+			"'siteurl' or option_name = 'blogname';"
+		);
+	
+	exec($mysql_query, $results);
+	
+	$blogname = 'Unknown';
+	$file_name = str_replace('/', '-', $wp_upgrade_pretty);
+	
+	if($results) {
+		foreach($results as $result) {
+			$result = explode("\t", $result);
+			$key = trim($result[1]);
+			$value = trim($result[2]);
+			
+			if($key === 'blogname') {
+				$blogname = $value;
+			}
+			if($key === 'siteurl') {
+				$site_url = parse_url($value, PHP_URL_HOST);
+				$site_path = parse_url($value, PHP_URL_PATH);
+				
+				if($site_path != '/') {
+					$site_path = trim($site_path, '/');
+					$site_path = str_replace('/', '-', $site_path);
+					$site_path = '-' . $site_path;
+				}
+				
+				$file_name = $site_url . $site_path;
+			}
+		}
+	}
+	
+	echo "{$blogname}\n";
+	echo "✓ Save File Name Base: {$file_name}\n";
 	echo "✓ Path: {$wp_upgrade}\n";
 	echo "✓ Site Size: {$wp_size}\n";	
 	echo "✓ Current Version: {$wp_current_version}\n";
