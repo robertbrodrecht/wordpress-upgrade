@@ -1,26 +1,6 @@
 #!/usr/bin/env php
 <?php
 
-/*
-
-Either:
-	For each config, make a folder in backup.
-	Copy in database with db name
-	Site as site.tar.gz
-OR:
-	Read host name from databse.
-	Dump databse as domain.com.sql
-	Site as domain.com.tar.gz
-	
-https://stackoverflow.com/questions/1602904/how-do-you-run-a-single-query-through-mysql-from-the-command-line
-
-mysql -uwww -pwww -hlocalhost vb_wordpress --batch -e "select * from wp_options where option_name = 'siteurl';"
-
-*/
-
-// die('Check comments');
-
-
 $time_start = time();
 $count_down = 0;
 
@@ -267,10 +247,21 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$wp_size = site_size($wp_upgrade);
 	$wp_db = wp_database($wp_upgrade);
 	
+	$conf_file = fopen($paths->backups . 'tmp_config.cnf', 'w');
+	fwrite($conf_file, "[client]\n");
+	fwrite($conf_file, "user={$wp_db->user}\n");
+	fwrite($conf_file, "password={$wp_db->pass}\n");
+	fwrite($conf_file, "host={$wp_db->host}\n");
+	fclose($conf_file);
+	
 	$mysql_query = $exec->mysql . 
+		' --defaults-extra-file=' . 
+		escapeshellarg($paths->backups . 'tmp_config.cnf') .
+/*
 		' -u' . escapeshellarg($wp_db->user) .
 		' -p' . escapeshellarg($wp_db->pass) .
 		' -h' . escapeshellarg($wp_db->host) .
+*/
 		' ' . escapeshellarg($wp_db->name) .
 		' --batch -e ' .
 		escapeshellarg(
@@ -343,6 +334,8 @@ foreach($wp_upgrades as $wp_upgrade) {
 	echo "✓ This Upgrade Time: $time_this_upgrade seconds\n";
 	echo "✓ Total Time Elapsed: $time_elapsed seconds\n";
 	echo "✓ Avg Time Per Upgrade: $avg_time seconds";
+	
+	unlink($paths->backups . 'tmp_config.cnf');
 	
 	$counter++;
 }
