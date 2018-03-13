@@ -1,6 +1,24 @@
 #!/usr/bin/env php
 <?php
 
+/*
+
+Either:
+	For each config, make a folder in backup.
+	Copy in database with db name
+	Site as site.tar.gz
+OR:
+	Read host name from databse.
+	Dump databse as domain.com.sql
+	Site as domain.com.tar.gz
+	
+https://stackoverflow.com/questions/1602904/how-do-you-run-a-single-query-through-mysql-from-the-command-line
+
+*/
+
+die('Check comments');
+
+
 $time_start = time();
 $count_down = 0;
 
@@ -233,9 +251,13 @@ echo "\n";
 
 $counter = 1;
 $total = count($wp_upgrades);
+$time_upgrade = time();
 
 foreach($wp_upgrades as $wp_upgrade) {
-	echo "\n\n";
+	echo "\n\n" . str_repeat('-', 80) . "\n\n";
+	
+	$time_this_upgrade = time();
+	
 	$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
 	$wp_upgrade_pretty = substr($wp_upgrade_pretty, 0, -1);
 	$wp_current_version = wp_version_local($wp_upgrade);
@@ -247,21 +269,40 @@ foreach($wp_upgrades as $wp_upgrade) {
 	echo "✓ Site Size: {$wp_size}\n";	
 	echo "✓ Current Version: {$wp_current_version}\n";
 	echo "✓ Latest Version: {$wp_latest}\n";
+
+	echo "\n";
+	echo "Taking HTML Snapshot...\n";
 	
 	echo "\n";
 	echo "Backing up...\n";
 	echo "+ Database dump...\n";
 	echo "+ Gzipping...\n";
+	echo "+ Complete.\n";
 
 	echo "\n";	
-	echo "+ Upgrading WordPress\n";
+	echo "Upgrading WordPress\n";
+	echo "+ Complete.\n";
+	
+	echo "\n";
+	echo "Comparing HTML Snapshot...\n";
+	echo "+ No Differences.\n";
 	
 	$percent_complete = round($counter/$total*100);
-	echo "\nProgress: {$percent_complete}%\n";
-
+	$time_elapsed = (time() - $time_start);
+	$time_this_upgrade = (time() - $time_this_upgrade);
+	$avg_time = round((time() - $time_upgrade)/$counter);
+	
+	echo "\n" . str_repeat('-', 80) . "\n\n";
+	
+	echo "Install status:\n";
+	echo "✓ Progress: {$percent_complete}%\n";
+	echo "✓ This Upgrade Time: $time_this_upgrade seconds\n";
+	echo "✓ Total Time Elapsed: $time_elapsed seconds\n";
+	echo "✓ Avg Time Per Upgrade: $avg_time seconds";
+	
 	$counter++;
 }
 
-echo "\n\n--------------\n\n";
+echo "\n\n" . str_repeat('-', 80) . "\n\n";
 echo "Done at " . date('Y-m-d H:i:s') . " after " . (time() - $time_start) . " seconds.";
 echo "\n\n";
