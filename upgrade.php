@@ -6,9 +6,19 @@ $count_down = 0;
 
 echo "\n";
 
-// This is where cli settings things are: $argv
 
 include 'functions.php';
+
+if(cli_get_arg('--help') || cli_get_arg('-?')) {
+	echo "\n\nCLI:
+* --no-download: Skip wp download 
+* Skip backup
+* Skip upgrade
+* Ignore errors 
+* Specific paths (prevents scan)
+* --clean: Start over\n\n";
+	exit();
+}
 
 set_time_limit(0);
 
@@ -83,7 +93,7 @@ echo "\n\n";
 $wordpress_gzip = $paths->wordpress . 'latest.tar.gz';
 $wordpress_gzip_output = $paths->wordpress . 'wordpress/';
 
-if(get_arg('--clean')) {
+if(cli_get_arg('--clean')) {
 	echo "\n";
 	echo "Cleaning up WordPress temporary files...\n";
 	exec('rm -rf ' . $wordpress_gzip_output);

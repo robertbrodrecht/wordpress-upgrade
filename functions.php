@@ -1,7 +1,18 @@
 <?php
 
-function get_arg($arg) {
-	echo "\n\nCLI OPTIONS DO NOT WORK YET!!!\n\n";
+function cli_get_arg($argument = false) {
+	global $argv;
+	
+	foreach($argv as $arg_index => $arg_value) {
+		if($arg_value === $argument) {
+			if(isset($argv[$arg_index+1]) && substr($argv[$arg_index+1], 0, 1) !== '-') {
+				return $argv[$arg_index+1];
+			}
+			
+			return true;
+		}
+	}
+	
 	return false;
 }
 
@@ -369,7 +380,7 @@ function cli_countdown($seconds = false, $final = false, $string = '%d second%s 
 }
 
 
-global $wp_latest, $wp_latest_url;
+global $wp_latest, $wp_latest_url, $argv;
 
 echo "\n\nIF YOU ARE GOING LIVE, DON'T FORGET TO ADJUST THE HARD CODING IN FUNCTIONS!!!\n\n";
 //wp_version_latest();
