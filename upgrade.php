@@ -256,7 +256,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 	echo "+ Upgrading WordPress\n";
 	
 	$percent_complete = round($counter/$total*100);
-	echo "\nProgress: {$percent_complete}%\n\n";
+	echo "\nProgress: {$percent_complete}%\n";
 
 	$counter++;
 }
