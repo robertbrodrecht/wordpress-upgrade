@@ -202,6 +202,7 @@ foreach($wp_config_locations as $wp_config_location) {
 }
 
 if($wp_upgrades) {
+	sort($wp_upgrades);
 	echo "\n";
 	echo "Will attempt to upgrade to {$wp_latest}:\n";
 	foreach($wp_upgrades as $wp_upgrade) {
