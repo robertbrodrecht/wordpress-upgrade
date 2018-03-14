@@ -1,7 +1,7 @@
 # Wordpress Upgrade
 Upgrades all WordPress installs in a folder via the command line.
 
-#Config
+## Config
 Here's a sample config. Create a file called `config.json` with something like this in it:
 
 ```
@@ -28,8 +28,7 @@ Here's a sample config. Create a file called `config.json` with something like t
 
 You have to use double quotes to make it valid JSON.
 
-#Command Line Parameters
-
+## Command Line Parameters
 From `upgrade.php --help`:
 
 ```
