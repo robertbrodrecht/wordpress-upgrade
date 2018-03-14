@@ -156,7 +156,7 @@ if(
 		
 		echo "+ Extracting\n";
 		exec(
-			$wxec->tar . ' zxf ' . $wordpress_gzip . ' -C ' . 
+			$exec->tar . ' zxf ' . $wordpress_gzip . ' -C ' . 
 			$paths->wordpress . ' 2> /dev/null', 
 			$res
 		);
