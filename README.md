@@ -41,6 +41,7 @@ You have to use double quotes to make it valid JSON.
 From `upgrade.php --help`:
 
 ```
+--dry-run        	Do everything except execute backup and upgrade.
 --clean          	Delete any WordPress temp files and download a new copy.
 --help           	Show this message.
 --list           	Short cut for no download, no backup, no upgrade.

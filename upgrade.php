@@ -15,7 +15,6 @@ $wp_latest_url = 'https://wordpress.org/latest.tar.gz';
 if(cli_get_arg('package')) {
 	$wp_latest_url = cli_get_arg('package');
 }
-
 $wp_latest = wp_version_latest();
 
 set_time_limit(0);
@@ -289,6 +288,9 @@ if($wp_no_upgrades) {
 
 if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
 	echo "\nAre you onboard?  If not, press ctrl+C.\n";
+	if(cli_get_arg('dry-run')) {
+		echo "\n!!!! THIS IS A DRY RUN. NO CHANGES WILL BE MADE !!!!\n";
+	}
 	echo "\n";
 	cli_countdown($count_down, 'OK, here we go.');
 	echo "\n";
@@ -437,9 +439,14 @@ foreach($wp_upgrades as $wp_upgrade) {
 			' > ' .
 			escapeshellarg($mysql_dump_output) . ' 2> /dev/null';
 		
-		@exec($mysql_dump, $mysql_dump_results);
+		if(!cli_get_arg('dry-run')) {
+			@exec($mysql_dump, $mysql_dump_results);
+		}
 		
-		if(file_exists($mysql_dump_output) && filesize($mysql_dump_output)) {
+		if(
+			(file_exists($mysql_dump_output) && filesize($mysql_dump_output)) ||
+			cli_get_arg('dry-run')
+		) {
 			$backp_db_success = true;
 			echo "+ Done.\n";	
 		} else {
@@ -460,9 +467,14 @@ foreach($wp_upgrades as $wp_upgrade) {
 			' -czf ' . $tar_output . ' ' . 
 			escapeshellarg($folder_name) . ' 2> /dev/null';
 		
-		@exec($tar_command, $tar_results);
+		if(!cli_get_arg('dry-run')) {
+			@exec($tar_command, $tar_results);
+		}
 		
-		if(file_exists($tar_output) && filesize($tar_output) > 500) {
+		if(
+			(file_exists($tar_output) && filesize($tar_output) > 500) ||
+			cli_get_arg('dry-run')
+		) {
 			$backp_files_success = true;
 			echo "+ Done.\n";
 		} else {
@@ -486,10 +498,13 @@ foreach($wp_upgrades as $wp_upgrade) {
 		$cp_results = false;
 		$cp = $exec->cp . ' -Rf ' . escapeshellarg($wordpress_gzip_output) .  
 			'* ' . escapeshellarg($wp_upgrade);
-			
-		exec($cp, $cp_results);
 		
-		$wp_upgrade_version = wp_version_local($wp_upgrade);
+		if(!cli_get_arg('dry-run')) {
+			exec($cp, $cp_results);
+			$wp_upgrade_version = wp_version_local($wp_upgrade);
+		} else {
+			$wp_upgrade_version = wp_version_latest();
+		}
 		
 		if($wp_upgrade_version === $wp_latest) {
 			echo "+ Complete.\n";

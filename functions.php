@@ -3,6 +3,7 @@
 function cli_get_arg($arg = false) {
 	$cli_options_short = '?';
 	$cli_options_long = array(
+		'dry-run' => 'Do everything except execute backup and upgrade.',
 		'clean' => 'Delete any WordPress temp files and download a new copy.',
 		'help' => 'Show this message.',
 		'list' => 'Short cut for no download, no backup, no upgrade.',
@@ -30,9 +31,9 @@ function cli_get_arg($arg = false) {
 	}
 	
 	if(isset($cli_options_values['?']) || isset($cli_options_values['help'])) {
-		echo "WordPress Upgrade\n\n";
+		echo "Bulk WordPress Upgrades\n\n";
 		echo wordwrap(
-			"Backup and ipgrade a folder full of WordPress installs with " . 
+			"Backup and upgrade a folder full of WordPress installs with " . 
 			"one script. This is for people managing a bunch of sites on " .
 			"a server where the web user can't write.\n\n",
 			80
