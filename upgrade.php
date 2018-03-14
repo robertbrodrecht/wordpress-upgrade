@@ -2,7 +2,7 @@
 <?php
 
 $time_start = time();
-$count_down = 0;
+$count_down = 3;
 
 echo "\n";
 
@@ -207,6 +207,14 @@ foreach($wp_config_locations as $wp_config_location) {
 			}
 		}
 		
+		$wp_current_version = wp_version_local(
+			dirname($wp_config_location) . '/'
+		);
+		
+		if(!wp_version_upgradable($wp_current_version)) {
+			$no_reason = 'Current';
+		}
+		
 		if(!$no_reason) {
 			$wp_upgrades[] = dirname($wp_config_location) . '/';
 		} else {
@@ -226,11 +234,7 @@ if($wp_upgrades) {
 		$wp_upgrade_pretty = substr($wp_upgrade_pretty, 0, -1);
 		$wp_current_version = wp_version_local($wp_upgrade);
 		
-		if(wp_version_upgradable($wp_current_version)) {
-			echo "+ {$wp_upgrade_pretty} (" . $wp_current_version . ")\n";
-		} else {
-			$wp_no_upgrades[] = 'Current: ' . $wp_upgrade;
-		}
+		echo "+ {$wp_upgrade_pretty} (" . $wp_current_version . ")\n";
 	}
 }
 
@@ -254,6 +258,7 @@ $time_upgrade = time();
 $success = array();
 $failure = array();
 $verify = array();
+
 
 foreach($wp_upgrades as $wp_upgrade) {
 	echo "\n\n" . str_repeat('-', 80) . "\n\n";
@@ -422,9 +427,14 @@ foreach($wp_upgrades as $wp_upgrade) {
 			
 		exec($cp, $cp_results);
 		
-		var_dump($cp, $cp_results);
+		$wp_upgrade_version = wp_version_local($wp_upgrade);
 		
-		echo "+ Complete.\n";
+		if($wp_upgrade_version === $wp_latest) {
+			echo "+ Complete.\n";
+		} else {
+			$verify[] = $wp_upgrade;
+			echo "- Not 100% sure the upgrade took.\n";
+		}
 		
 		echo "\n";
 		echo "Comparing HTML Snapshot...\n";
@@ -434,9 +444,14 @@ foreach($wp_upgrades as $wp_upgrade) {
 			
 			$diff = false;
 			
+			echo "+ Snapshot before signature: {$html_before_md5}\n";
+			echo "+ Snapshot after signature: {$html_after_md5}\n";
+			
 			if($html_before_md5 !== $html_after_md5) {
 				echo "+ Snapshot signatures differ.\n";
 				$diff = diff_html($html_before, $html_after);
+			} else {
+				
 			}
 			
 			if($diff === false) {
@@ -477,6 +492,37 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$counter++;
 }
 
-echo "\n\n" . str_repeat('-', 80) . "\n\n";
+if($success || $failure || $verify) {
+	echo "\n\n" . str_repeat('-', 80) . "\n\n";
+}
+
+if($success) {
+	echo "Successful updates:\n";
+	foreach($success as $site) {
+		echo "+ {$site}\n";
+	}
+}
+
+if($failure) {
+	echo "\n";
+	echo "Failed updates:\n";
+	foreach($failure as $site) {
+		echo "+ {$site}\n";
+	}
+}
+
+if($verify) {
+	echo "\n";
+	echo "Verify these sites:\n";
+	foreach($verify as $site) {
+		echo "+ {$site}\n";
+	}
+}
+
+if(!$success && !$failure && !$verify) {
+	echo "\n";
+}
+
+echo "\n" . str_repeat('-', 80) . "\n\n";
 echo "Done at " . date('Y-m-d H:i:s') . " after " . (time() - $time_start) . " seconds.";
 echo "\n\n";
