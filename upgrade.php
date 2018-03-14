@@ -2,7 +2,7 @@
 <?php
 
 $time_start = time();
-$count_down = 3;
+$count_down = 30;
 
 echo "\n";
 
