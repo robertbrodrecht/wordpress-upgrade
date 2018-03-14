@@ -344,7 +344,7 @@ function config_apply($file, $defaults) {
 		}
 	}
 	
-	if($file->include) {
+	if(isset($file->include) && $file->include) {
 		$keep_includes = array();
 		
 		if(!is_array($file->include)) {
@@ -370,7 +370,7 @@ function config_apply($file, $defaults) {
 		$file->include = $keep_includes;
 	}
 	
-	if($file->exclude) {
+	if(isset($file->exclude) && $file->exclude) {
 		$keep_excludes = array();
 		
 		if(!is_array($file->exclude)) {
