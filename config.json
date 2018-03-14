@@ -1,4 +1,4 @@
 {
 	"include": [],
-	"exclude": ['/test/whatever/']
+	"exclude": []
 }
