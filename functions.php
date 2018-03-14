@@ -70,6 +70,7 @@ function cli_get_arg($arg = false) {
 	}
 }
 
+
 function site_size($path = false) {
 	if(!$path) {
 		return 'Unknown Size';
