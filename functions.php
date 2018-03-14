@@ -110,10 +110,6 @@ function wp_database($site = false) {
 		$settings
 	);
 	
-	echo '<pre style="line-height: 1; padding: 10px; background: #EEE; color: #333;">';
-	var_dump($settings);
-	echo '</pre>';
-	
 	$database_name = false;
 	$database_user = false;
 	$database_password = false;
