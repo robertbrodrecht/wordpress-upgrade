@@ -29,7 +29,7 @@ Here's a sample config. Create a file called `config.json` with something like t
 You have to use double quotes to make it valid JSON.
 
 ## Command Line Parameters
-From `upgrade.php --help`:
+Most of the command line parameters don't work, but for now, from `upgrade.php --help`:
 
 ```
 --clean          	Delete any WordPress temp files and download a new copy.
