@@ -105,7 +105,7 @@ function wp_database($site = false) {
 	$wp_conifg = file_get_contents($wp_conifg);
 	
 	preg_match_all(
-		'/define\([\'\"](.*?)[\'\"]\,\s*[\'\"](.*?)[\'\"]\)/', 
+		'/define\(\s*?[\'\"](.*?)[\'\"]\,\s*?[\'\"](.*?)[\'\"]\s*?\);/', 
 		$wp_conifg, 
 		$settings
 	);
