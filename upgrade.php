@@ -314,8 +314,6 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$wp_size = site_size($wp_upgrade);
 	$wp_db = wp_database($wp_upgrade);
 	
-	var_dump($wp_db);
-	
 	$conf_file = fopen($paths->backups . 'tmp_config.cnf', 'w');
 	fwrite($conf_file, "[client]\n");
 	fwrite($conf_file, "user={$wp_db->user}\n");
