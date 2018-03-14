@@ -1,5 +1,5 @@
-backup/*
+backups/*
 wordpress/*
 
-config.json
+*.json
 .DS_Store
