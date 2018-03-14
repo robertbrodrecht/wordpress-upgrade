@@ -203,7 +203,7 @@ exec(
 	$wp_config_locations
 );
 
-if($config->include) {
+if(isset($config->include) && $config->include) {
 	foreach($config->include as $include_path) {
 		exec(
 			$exec->find . ' ' . escapeshellarg(substr($include_path, 0, -1)) . 

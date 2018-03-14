@@ -480,5 +480,5 @@ function date_pretty($seconds = 0) {
 		$output = '0 seconds';
 	}
 	
-	return $output;
+	return $output . ' (' . $seconds . ')';
 }
