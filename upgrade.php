@@ -333,8 +333,6 @@ foreach($wp_upgrades as $wp_upgrade) {
 			"'siteurl' or option_name = 'blogname'; "
 		) . ' 2> /dev/null';
 	
-	echo "\n\n{$mysql_query}\n\n";
-	
 	@exec($mysql_query, $info_query_results);
 	
 	$blogname = 'Unknown';

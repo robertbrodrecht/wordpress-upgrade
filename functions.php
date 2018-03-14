@@ -133,13 +133,19 @@ function wp_database($site = false) {
 	}
 	
 	$prefix = 'wp_';
+	
 	preg_match_all(
 		'/\$table_prefix\s*?=\s*?[\'\"](.*?)[\'\"];/', 
 		$wp_conifg,
 		$prefix_match
 	);
+	
 	if(isset($prefix_match[1][0])) {
 		$prefix = trim($prefix_match[1][0]);
+	}
+	
+	if($database_host === 'localhost') {
+		$database_host = '127.0.0.1';
 	}
 	
 	return (object) array(
