@@ -8,9 +8,9 @@ function cli_get_arg($arg = false) {
 		'no-download' => 'Disable download of new WordPress.',
 		'no-backup' => 'Do not perform backups of sites.',
 		'no-upgrade' => 'Do not perform WordPress upgrade.',
-		'package:' => 'Specify with the full URL to a WordPress gzip.',
-		'single:' => 'Specify the path to a single WordPress install to upgrade.',
-		'version:' => 'Specify with the current version number to override latest.',
+		'package:' => 'Specify the full URL to a WordPress gzip.',
+		'single:' => 'Specify a path to a single WordPress install to upgrade.',
+		'version:' => 'Override lates version number. For example: 4.9.4',
 	);
 	
 	$cli_options_values = getopt(
