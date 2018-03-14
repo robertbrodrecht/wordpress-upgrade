@@ -2,18 +2,27 @@
 Upgrades all WordPress installs in a folder via the command line.
 
 ## Config
-Here's a sample config. Create a file called `config.json` with something like this in it:
+If you install this in your web root in a folder that writable by the user 
+you're running it as and you're sure you can upgrade all of your WordPress 
+installs in your web root, you probably don't need a config. The script tries 
+to detect all the settings.
+
+You'll get a report of the config when you run the script, and you'll have some
+time to look at the config so you can abort if you see anything wrong. If you
+do, copy the config from the terminal into `config.json`, then edit as you need.
+
+Here's a sample config with the settings that are used.
 
 ```
 {
 	"executables": {
-		"mysqldump": "path/to/mysqldump",
-		"mysql": "path/to/mysql",
-		"tar": "path/to/tar",
-		"find": "path/to/find",
-		"curl": "path/to/curl",
-		"du": "path/to/du",
-		"cp": "path/to/cp"
+		"mysqldump": "/path/to/mysqldump",
+		"mysql": "/path/to/mysql",
+		"tar": "/path/to/tar",
+		"find": "/path/to/find",
+		"curl": "/path/to/curl",
+		"du": "/path/to/du",
+		"cp": "/path/to/cp"
 	},
 	"paths": {
 		"sites": dirname($script_path) . "/",
@@ -29,7 +38,8 @@ Here's a sample config. Create a file called `config.json` with something like t
 You have to use double quotes to make it valid JSON.
 
 ## Command Line Parameters
-Most of the command line parameters don't work, but for now, from `upgrade.php --help`:
+Most of the command line parameters don't work yet, but for now, from 
+`upgrade.php --help`:
 
 ```
 --clean          	Delete any WordPress temp files and download a new copy.
