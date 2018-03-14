@@ -97,10 +97,13 @@ if($settings_modifications) {
 		echo "+ {$settings_modification}\n";
 	}
 }
-echo "\nAre you onboard?  If not, press ctrl+C.\n";
-echo "\n";
-cli_countdown($count_down, 'OK, here we go.');
-echo "\n\n";
+
+if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
+	echo "\nAre you onboard?  If not, press ctrl+C.\n";
+	echo "\n";
+	cli_countdown($count_down, 'OK, here we go.');
+	echo "\n\n";
+}
 
 
 
@@ -272,10 +275,12 @@ if($wp_no_upgrades) {
 	}
 }
 
-echo "\nAre you onboard?  If not, press ctrl+C.\n";
-echo "\n";
-cli_countdown($count_down, 'OK, here we go.');
-echo "\n";
+if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
+	echo "\nAre you onboard?  If not, press ctrl+C.\n";
+	echo "\n";
+	cli_countdown($count_down, 'OK, here we go.');
+	echo "\n";
+}
 
 $counter = 1;
 $total = count($wp_upgrades);
@@ -331,7 +336,17 @@ foreach($wp_upgrades as $wp_upgrade) {
 			$value = trim($result[2]);
 			
 			if($key === 'blogname') {
-				$blogname = $value;
+				$blogname = preg_replace_callback(
+					"/(&#[0-9]+;)/", 
+					function($m) {
+						return mb_convert_encoding(
+								$m[1], 
+								"UTF-8", 
+								"HTML-ENTITIES"
+							); 
+					}, 
+					$value
+				); 
 			}
 			if($key === 'siteurl') {
 				
