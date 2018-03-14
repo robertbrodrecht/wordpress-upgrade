@@ -67,7 +67,7 @@ if(is_object($config)) {
 	$config = $config_default;
 }
 
-if(!$config->exclude) {
+if(!isset($config->exclude) || !$config->exclude) {
 	$config->exclude = array();
 }
 
@@ -87,8 +87,16 @@ $paths = $config->paths;
 
 echo "\n";
 echo "Here are your settings.  Please verify:\n";
-$settings_modifications = $config->_modifications;
-unset($config->_modifications);
+if(isset($config->_modifications) && $config->_modifications) {
+	$settings_modifications = $config->_modifications;
+} else {
+	$settings_modifications = array();
+}
+
+if(isset($config->_modifications)) {
+	unset($config->_modifications);
+}
+
 echo str_replace('\/', '/', json_encode($config, JSON_PRETTY_PRINT));
 if($settings_modifications) {
 	echo "\n\n";
@@ -346,7 +354,9 @@ foreach($wp_upgrades as $wp_upgrade) {
 							); 
 					}, 
 					$value
-				); 
+				);
+				
+				$blogname = html_entity_decode($blogname);
 			}
 			if($key === 'siteurl') {
 				
