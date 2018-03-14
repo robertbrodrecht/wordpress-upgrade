@@ -71,6 +71,15 @@ if(!$config->exclude) {
 	$config->exclude = array();
 }
 
+if(cli_get_arg('single')) {
+	$config->paths->sites = cli_get_arg('single');
+	if(substr($config->paths->sites, -1) !== '/') {
+		$config->paths->sites = $config->paths->sites . '/';
+	}
+	$config->include = array();
+	$config->exclude = array();
+}
+
 $config->exclude[] = $config->paths->wordpress;
 
 $exec = $config->executables;
@@ -105,8 +114,11 @@ if(cli_get_arg('clean')) {
 }
 
 if(
-	!file_exists($wordpress_gzip_output) || 
-	wp_version_upgradable(wp_version_local($wordpress_gzip_output))
+	(
+		!file_exists($wordpress_gzip_output) || 
+		wp_version_upgradable(wp_version_local($wordpress_gzip_output))
+	) &&
+	!cli_get_arg('no-download')
 ) {
 	echo "\n";
 	echo "We need to download WordPress...\n\n";
@@ -151,15 +163,25 @@ if(
 
 $wordpress_local_upgrade_to = wp_version_local($wordpress_gzip_output);
 
-if(wp_version_latest() !== $wordpress_local_upgrade_to) {
-	echo "\nVersion " . wp_version_latest() . " is different than the " .
-		"local version {$wordpress_local_upgrade_to}. Try running with " .
-		"--clean to delete local copy.\n\n";
+if(
+	!cli_get_arg('no-upgrade') && 
+	wp_version_latest() !== $wordpress_local_upgrade_to
+) {
+	echo wordwrap(
+			"\nVersion " . wp_version_latest() . " is different than the " .
+			"local version {$wordpress_local_upgrade_to}. Try running with " .
+			"--clean to delete local copy fpr a mew download or --version " .
+			"{$wordpress_local_upgrade_to} to force the currently downloaded" .
+			"version.\n\n",
+			80
+		);
 	exit;
 }
 
-echo "\n";
-echo "Latest WordPress is {$wordpress_local_upgrade_to}...\n";
+if(!cli_get_arg('no-upgrade')) {
+	echo "\n";
+	echo "Latest WordPress is {$wordpress_local_upgrade_to}...\n";
+}
 
 echo "\n";
 echo "Searching for likely WordPress installs...\n";
@@ -215,7 +237,7 @@ foreach($wp_config_locations as $wp_config_location) {
 			$no_reason = 'Current';
 		}
 		
-		if(!$no_reason) {
+		if(cli_get_arg('no-upgrade') || !$no_reason) {
 			$wp_upgrades[] = dirname($wp_config_location) . '/';
 		} else {
 			$wp_no_upgrades[] = "{$no_reason}: " . dirname($wp_config_location);
@@ -228,7 +250,11 @@ foreach($wp_config_locations as $wp_config_location) {
 if($wp_upgrades) {
 	sort($wp_upgrades);
 	echo "\n";
-	echo "Will attempt to upgrade to {$wp_latest}:\n";
+	if(cli_get_arg('no-upgrade')) {
+		echo "Will attempt to examine:\n";
+	} else {
+		echo "Will attempt to upgrade to {$wp_latest}:\n";
+	}
 	foreach($wp_upgrades as $wp_upgrade) {
 		$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
 		$wp_upgrade_pretty = substr($wp_upgrade_pretty, 0, -1);
@@ -261,7 +287,7 @@ $verify = array();
 
 
 foreach($wp_upgrades as $wp_upgrade) {
-	echo "\n\n" . str_repeat('-', 80) . "\n\n";
+	echo "\n" . str_repeat('-', 80) . "\n\n";
 	
 	$time_this_upgrade = time();
 	
@@ -342,7 +368,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 	echo "✓ Latest Version: {$wp_latest}\n";
 	echo "✓ Save File Name Base: {$file_name}\n";
 	
-	if(!$can_dump_database) {
+	if(!cli_get_arg('no-backup') && !$can_dump_database) {
 		echo "\n";
 		echo "Can't connect to database.  Aborting.";
 		$failure[] = $wp_upgrade;
@@ -354,61 +380,68 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$html_before = false;
 	$html_before_md5 = false;
 	
-	echo "\n";
-	echo "Taking HTML Snapshot...\n";
-	if($site_full_url) {
-		$html_before = @file_get_contents($site_full_url);
-		if($html_before) {
-			$html_before_md5 = md5($html_before);
-			echo "+ Snapshot signature: {$html_before_md5}\n";
+	if(!cli_get_arg('no-upgrade')) {
+		echo "\n";
+		echo "Taking HTML Snapshot...\n";
+		if($site_full_url) {
+			$html_before = @file_get_contents($site_full_url);
+			if($html_before) {
+				$html_before_md5 = md5($html_before);
+				echo "+ Snapshot signature: {$html_before_md5}\n";
+			} else {
+				echo "- Could not get snapshot from '{$site_full_url}'\n";
+			}
 		} else {
-			echo "- Could not get snapshot from '{$site_full_url}'\n";
+			$html_before = false;
+			echo "- Could not determine URL due to database issues.'\n";
+		}
+	}
+	
+	if(!cli_get_arg('no-backup')) {
+		echo "\n";
+		echo "Backing up database...\n";
+		$mysql_dump_output = $paths->backups . $file_name . '.sql';
+		$mysql_dump = $exec->mysqldump . 
+			' --defaults-extra-file=' . 
+			escapeshellarg($paths->backups . 'tmp_config.cnf') .
+			' ' . escapeshellarg($wp_db->name) .
+			' > ' .
+			escapeshellarg($mysql_dump_output);
+		
+		@exec($mysql_dump, $mysql_dump_results);
+		
+		if(file_exists($mysql_dump_output) && filesize($mysql_dump_output)) {
+			$backp_db_success = true;
+			echo "+ Done.\n";	
+		} else {
+			echo "- Database backup failed.\n";
+		}
+		
+		echo "\n";
+		echo "Backing up files...\n";
+		
+		$folder_name = str_replace(dirname($wp_upgrade), '', $wp_upgrade);
+		$folder_name = trim($folder_name, '/');
+		
+		$tar_results = false;
+		
+		$tar_output = $paths->backups . $file_name . '.tar.gz';
+		$tar_command = $exec->tar . ' -C ' . 
+			escapeshellarg(dirname($wp_upgrade) . '/') .
+			' -czf ' . $tar_output . ' ' . 
+			escapeshellarg($folder_name);
+		
+		@exec($tar_command, $tar_results);
+		
+		if(file_exists($tar_output) && filesize($tar_output) > 500) {
+			$backp_files_success = true;
+			echo "+ Done.\n";
+		} else {
+			echo "- Could not perform backup.\n";
 		}
 	} else {
-		$html_before = false;
-		echo "- Could not determine URL due to database issues.'\n";
-	}
-	
-	echo "\n";
-	echo "Backing up database...\n";
-	$mysql_dump_output = $paths->backups . $file_name . '.sql';
-	$mysql_dump = $exec->mysqldump . 
-		' --defaults-extra-file=' . 
-		escapeshellarg($paths->backups . 'tmp_config.cnf') .
-		' ' . escapeshellarg($wp_db->name) .
-		' > ' .
-		escapeshellarg($mysql_dump_output);
-	
-	@exec($mysql_dump, $mysql_dump_results);
-	
-	if(file_exists($mysql_dump_output) && filesize($mysql_dump_output)) {
-		$backp_db_success = true;
-		echo "+ Done.\n";	
-	} else {
-		echo "- Database backup failed.\n";
-	}
-	
-	echo "\n";
-	echo "Backing up files...\n";
-	
-	$folder_name = str_replace(dirname($wp_upgrade), '', $wp_upgrade);
-	$folder_name = trim($folder_name, '/');
-	
-	$tar_results = false;
-	
-	$tar_output = $paths->backups . $file_name . '.tar.gz';
-	$tar_command = $exec->tar . ' -C ' . 
-		escapeshellarg(dirname($wp_upgrade) . '/') .
-		' -czf ' . $tar_output . ' ' . 
-		escapeshellarg($folder_name);
-	
-	@exec($tar_command, $tar_results);
-	
-	if(file_exists($tar_output) && filesize($tar_output) > 500) {
 		$backp_files_success = true;
-		echo "+ Done.\n";
-	} else {
-		echo "- Could not perform backup.\n";
+		$backp_db_success = true;
 	}
 	
 	if(!$backp_files_success || !$backp_db_success) {
@@ -416,7 +449,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 		echo "Backup failed. Aborting upgrade.\n";
 		$failure[] = $wp_upgrade;
 		
-	} else {
+	} else if(!cli_get_arg('no-upgrade')) {
 		echo "\n";	
 		echo "Upgrading WordPress\n";
 		
@@ -457,9 +490,22 @@ foreach($wp_upgrades as $wp_upgrade) {
 			if($diff === false) {
 				echo "+ No Differences.\n";
 			} else {
-				echo "+ First difference starting here:\n";
+				echo "- Differences found. Before and after files are in the" . 
+					" backups folder for comparison.\n";
+				echo "  First difference starting here:\n";
 				echo "  Before: {$diff[0]}\n";
 				echo "  After: {$diff[1]}\n";
+
+				file_put_contents(
+					$paths->backups . $file_name . '_before.html',
+					$html_after
+				);
+				
+				file_put_contents(
+					$paths->backups . $file_name . '_after.html',
+					$html_after
+				);
+				
 				$verify[] = $wp_upgrade;
 			}
 			
@@ -468,61 +514,74 @@ foreach($wp_upgrades as $wp_upgrade) {
 		}
 		
 		$success[] = $wp_upgrade;
+	} else {
+		$success[] = $wp_upgrade;
 	}
 	
-	$percent_complete = round($counter / $total * 100);
-	$success_rate = round(
-			count($success) / (count($success) + count($failure)) * 100
-		);
-	$time_elapsed = (time() - $time_start);
-	$time_this_upgrade = (time() - $time_this_upgrade);
-	$avg_time = round((time() - $time_upgrade)/$counter);
 	
-	echo "\n" . str_repeat('-', 80) . "\n\n";
-	
-	echo "Install status:\n";
-	echo "✓ Progress: {$percent_complete}%\n";
-	echo "✓ Success Rate: {$success_rate}%\n";
-	echo "✓ This Upgrade Time: $time_this_upgrade seconds\n";
-	echo "✓ Total Time Elapsed: $time_elapsed seconds\n";
-	echo "✓ Avg Time Per Upgrade: $avg_time seconds";
+	if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
+		$percent_complete = round($counter / $total * 100);
+		$time_elapsed = date_pretty((time() - $time_start));
+		$time_this_upgrade = date_pretty((time() - $time_this_upgrade));
+		$avg_time = date_pretty(round((time() - $time_upgrade)/$counter));
+		
+		$success_rate = round(
+				count($success) / (count($success) + count($failure)) * 100
+			);
+		
+		echo "\n" . str_repeat('-', 80) . "\n\n";
+		
+		echo "Progress:\n";
+		echo "✓ Complete: {$percent_complete}%\n";
+		if(!cli_get_arg('no-upgrade')) {
+			echo "✓ Success Rate: {$success_rate}%\n";
+			echo "✓ This Upgrade Time: $time_this_upgrade\n";
+		} else if(!cli_get_arg('no-backup')) {
+			echo "✓ Success Rate: {$success_rate}%\n";
+			echo "✓ This Backup Time: $time_this_upgrade\n";
+		}
+		echo "✓ Total Time Elapsed: $time_elapsed\n";
+		echo "✓ Avg Time Per Site: $avg_time\n";
+	}
 	
 	unlink($paths->backups . 'tmp_config.cnf');
 	
 	$counter++;
 }
 
-if($success || $failure || $verify) {
-	echo "\n\n" . str_repeat('-', 80) . "\n\n";
-}
-
-if($success) {
-	echo "Successful updates:\n";
-	foreach($success as $site) {
-		echo "+ {$site}\n";
+if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
+	if($success || $failure || $verify) {
+		echo "\n" . str_repeat('-', 80) . "\n\n";
 	}
-}
-
-if($failure) {
-	echo "\n";
-	echo "Failed updates:\n";
-	foreach($failure as $site) {
-		echo "+ {$site}\n";
+	
+	if($success) {
+		echo "Successful updates:\n";
+		foreach($success as $site) {
+			echo "+ {$site}\n";
+		}
 	}
-}
-
-if($verify) {
-	echo "\n";
-	echo "Verify these sites:\n";
-	foreach($verify as $site) {
-		echo "+ {$site}\n";
+	
+	if($failure) {
+		echo "\n";
+		echo "Failed updates:\n";
+		foreach($failure as $site) {
+			echo "+ {$site}\n";
+		}
 	}
-}
-
-if(!$success && !$failure && !$verify) {
-	echo "\n";
+	
+	if($verify) {
+		echo "\n";
+		echo "Verify these sites:\n";
+		foreach($verify as $site) {
+			echo "+ {$site}\n";
+		}
+	}
+	
+	if(!$success && !$failure && !$verify) {
+		echo "\n";
+	}
 }
 
 echo "\n" . str_repeat('-', 80) . "\n\n";
-echo "Done at " . date('Y-m-d H:i:s') . " after " . (time() - $time_start) . " seconds.";
+echo "Done at " . date('Y-m-d H:i:s') . " after " . date_pretty((time() - $time_start)) . ".";
 echo "\n\n";

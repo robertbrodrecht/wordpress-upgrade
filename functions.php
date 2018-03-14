@@ -5,6 +5,7 @@ function cli_get_arg($arg = false) {
 	$cli_options_long = array(
 		'clean' => 'Delete any WordPress temp files and download a new copy.',
 		'help' => 'Show this message.',
+		'list' => 'Short cut for no download, no backup, no upgrade.',
 		'no-download' => 'Disable download of new WordPress.',
 		'no-backup' => 'Do not perform backups of sites.',
 		'no-upgrade' => 'Do not perform WordPress upgrade.',
@@ -17,6 +18,12 @@ function cli_get_arg($arg = false) {
 			$cli_options_short,
 			array_keys($cli_options_long)
 		);
+	
+	if(isset($cli_options_values['list'])) {
+		$cli_options_values['no-backup'] = false;
+		$cli_options_values['no-download'] = false;
+		$cli_options_values['no-upgrade'] = false;
+	}
 	
 	while(substr($arg, 0, 1) === '-') {
 		$arg = substr($arg, 1);
@@ -447,4 +454,31 @@ function diff_html($before = '', $after = '') {
 	}
 	
 	return false;
+}
+
+
+function date_pretty($seconds = 0) {
+	$date = explode(':', date('H:i:s', $seconds));
+	$parts = array('hour', 'minute', 'second');
+	$output = '';
+	
+	foreach($date as $index => $value) {
+		$value = (int) $value;
+		if($value > 0) {
+			if($output) {
+				$output .= ' ';
+			}
+			$output .= $value . ' ' . $parts[$index];
+			if($value !== 1) {
+				$output .= 's';
+			}
+// 			var_dump($output, $value . ' ' . $parts[$index]);
+		}
+	}
+	
+	if($output === '') {
+		$output = '0 seconds';
+	}
+	
+	return $output;
 }

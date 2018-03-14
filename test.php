@@ -8,6 +8,12 @@ set_time_limit(0);
 $errors = array();
 
 
+// -- Date testing.
+if(date_pretty(122*60+2) !== '2 hours 2 minutes 2 seconds') {
+	$errors[] = "date_pretty(122*60+2) isn't working right";
+}
+
+
 
 // -- Shell testing.
 if(!file_exists(shell_which('mysqldump'))) {
@@ -48,7 +54,8 @@ if(wp_version_local('/') !== -2) {
 	$errors[] = 'wp_version_local("/") !== -1';
 }
 
-$path_base = '/Users/robert/Sites/vodkabuzz.now';
+/*
+$path_base = '';
 
 $path_tests = array(
 	$path_base,
@@ -61,6 +68,7 @@ foreach($path_tests as $path_test) {
 		$errors[] = 'wp_version_local("' . $path_test . '") is not a version.';
 	}
 }
+*/
 
 
 

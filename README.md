@@ -38,18 +38,16 @@ Here's a sample config with the settings that are used.
 You have to use double quotes to make it valid JSON.
 
 ## Command Line Parameters
-Most of the command line parameters don't work yet, but for now, from 
-`upgrade.php --help`:
+From `upgrade.php --help`:
 
 ```
 --clean          	Delete any WordPress temp files and download a new copy.
 --help           	Show this message.
---no-download    	Disable download of new WordPress.†
---no-backup      	Do not perform backups of sites.†
---no-upgrade     	Do not perform WordPress upgrade.†
+--list           	Short cut for no download, no backup, no upgrade.
+--no-download    	Disable download of new WordPress.
+--no-backup      	Do not perform backups of sites.
+--no-upgrade     	Do not perform WordPress upgrade.
 --package {value}	Specify the full URL to a WordPress gzip.
 --single {value} 	Specify a path to a single WordPress install to upgrade.
 --version {value}	Override lates version number. For example: 4.9.4
 ```
-
-† Not working yet.
