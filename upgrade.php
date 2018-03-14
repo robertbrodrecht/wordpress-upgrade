@@ -155,7 +155,11 @@ if(
 		chmod($paths->wordpress, 0777);
 		
 		echo "+ Extracting\n";
-		exec('tar zxf ' . $wordpress_gzip . ' -C ' . $paths->wordpress, $res);
+		exec(
+			$wxec->tar . ' zxf ' . $wordpress_gzip . ' -C ' . 
+			$paths->wordpress . ' 2> /dev/null', 
+			$res
+		);
 		echo "+ Deleting gzip.\n";
 		unlink($wordpress_gzip);
 		
@@ -199,7 +203,7 @@ echo "Searching for likely WordPress installs...\n";
 
 exec(
 	$exec->find . ' ' . escapeshellarg(substr($paths->sites, 0, -1)) . 
-		' -name "wp-config.php"',
+		' -name "wp-config.php" 2> /dev/null',
 	$wp_config_locations
 );
 
@@ -207,7 +211,7 @@ if(isset($config->include) && $config->include) {
 	foreach($config->include as $include_path) {
 		exec(
 			$exec->find . ' ' . escapeshellarg(substr($include_path, 0, -1)) . 
-				' -name "wp-config.php"',
+				' -name "wp-config.php" 2> /dev/null',
 			$wp_extra_locations
 		);
 		
@@ -326,8 +330,8 @@ foreach($wp_upgrades as $wp_upgrade) {
 		' --batch -e ' .
 		escapeshellarg(
 			"select * from {$wp_db->prefix}options where option_name = " . 
-			"'siteurl' or option_name = 'blogname';"
-		);
+			"'siteurl' or option_name = 'blogname'; "
+		) . ' 2> /dev/null';
 	
 	@exec($mysql_query, $info_query_results);
 	
@@ -431,7 +435,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 			escapeshellarg($paths->backups . 'tmp_config.cnf') .
 			' ' . escapeshellarg($wp_db->name) .
 			' > ' .
-			escapeshellarg($mysql_dump_output);
+			escapeshellarg($mysql_dump_output) . ' 2> /dev/null';
 		
 		@exec($mysql_dump, $mysql_dump_results);
 		
@@ -454,7 +458,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 		$tar_command = $exec->tar . ' -C ' . 
 			escapeshellarg(dirname($wp_upgrade) . '/') .
 			' -czf ' . $tar_output . ' ' . 
-			escapeshellarg($folder_name);
+			escapeshellarg($folder_name) . ' 2> /dev/null';
 		
 		@exec($tar_command, $tar_results);
 		

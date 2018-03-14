@@ -83,7 +83,7 @@ function site_size($path = false) {
 		return 'Unknown Size';
 	}
 	
-	$du_command = 'du -ksh ' . escapeshellarg($path);
+	$du_command = 'du -ksh ' . escapeshellarg($path) . ' 2> /dev/null';
 	$du_output = exec($du_command);
 	$du_output_parts = explode('	', $du_output);
 	$directory_size = $du_output_parts[0];
