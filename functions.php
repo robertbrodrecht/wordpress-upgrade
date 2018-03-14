@@ -38,7 +38,7 @@ function cli_get_arg($arg = false) {
 			80
 		);
 		
-		echo "Usage:\n";
+		echo "\nUsage:\n\n";
 		$longest = 0;
 		foreach($cli_options_long as $argument => $description) {
 			$argument = str_replace(':', ' {value}', $argument);
