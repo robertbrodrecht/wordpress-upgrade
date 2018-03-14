@@ -458,7 +458,13 @@ function diff_html($before = '', $after = '') {
 
 
 function date_pretty($seconds = 0) {
-	$date = explode(':', date('H:i:s', $seconds));
+	$date = explode(
+		':',
+		date(
+			'H:i:s', 
+			strtotime('+' . $seconds . ' seconds', strtotime('00:00:00'))
+		)
+	);
 	$parts = array('hour', 'minute', 'second');
 	$output = '';
 	
@@ -472,7 +478,6 @@ function date_pretty($seconds = 0) {
 			if($value !== 1) {
 				$output .= 's';
 			}
-// 			var_dump($output, $value . ' ' . $parts[$index]);
 		}
 	}
 	
@@ -480,5 +485,5 @@ function date_pretty($seconds = 0) {
 		$output = '0 seconds';
 	}
 	
-	return $output . ' (' . $seconds . ')';
+	return $output;
 }
