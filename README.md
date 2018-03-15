@@ -53,3 +53,17 @@ From `upgrade.php --help`:
 --single {value} 	Specify a path to a single WordPress install to upgrade.
 --version {value}	Override lates version number. For example: 4.9.4
 ```
+
+## To Do
+
+1. Add color to make things easier to discern.
+2. Swap to better status glyphs.
+
+Generic Info Glyphs: ➔ ✱ ❯ 
+Looks best: ❯
+
+Error Glyphs: ✖ ✕ ☹ ☒
+Looks best: ✕
+
+Success Glyphs: ✓ ✔ ☺  ☑
+Looks best: ✓
