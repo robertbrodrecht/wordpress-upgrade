@@ -41,6 +41,7 @@ You have to use double quotes to make it valid JSON.
 From `upgrade.php --help`:
 
 ```
+--auto           	Use a 30 second count down instead of manual confirmations.
 --dry-run        	Do everything except execute backup and upgrade.
 --clean          	Delete any WordPress temp files and download a new copy.
 --help           	Show this message.

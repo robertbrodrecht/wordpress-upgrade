@@ -106,10 +106,24 @@ if($settings_modifications) {
 }
 
 if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
-	echo "\nAre you onboard?  If not, press ctrl+C.\n";
 	echo "\n";
-	cli_countdown($count_down, 'OK, here we go.');
-	echo "\n\n";
+	if(cli_get_arg('auto')) {
+		echo "\nAre you onboard?  If not, press ctrl+C.\n";
+		echo "\n";
+		cli_countdown($count_down, 'OK, here we go.');
+		echo "\n\n";
+	} else {
+		echo "\nAre you onboard? Enter Y or N: ";
+		$stdin = fopen ('php://stdin', 'r');
+		$line = fgets($stdin);
+		if(strtolower(trim($line)) != 'y'){
+		    echo "Ok, we're done here.\n\n";
+		    exit;
+		} else {
+			echo "\nOK, here we go.\n\n";
+		}
+		fclose($stdin);	
+	}
 }
 
 
@@ -287,13 +301,27 @@ if($wp_no_upgrades) {
 }
 
 if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
-	echo "\nAre you onboard?  If not, press ctrl+C.\n";
 	if(cli_get_arg('dry-run')) {
-		echo "\n!!!! THIS IS A DRY RUN. NO CHANGES WILL BE MADE !!!!\n";
+		echo "\n!!!! THIS IS A DRY RUN. NO CHANGES WILL BE MADE !!!!";
 	}
 	echo "\n";
-	cli_countdown($count_down, 'OK, here we go.');
-	echo "\n";
+	if(cli_get_arg('auto')) {
+		echo "\nAre you onboard?  If not, press ctrl+C.\n";
+		echo "\n";
+		cli_countdown($count_down, 'OK, here we go.');
+		echo "\n\n";
+	} else {
+		echo "\nAre you onboard? Enter Y or N: ";
+		$stdin = fopen ('php://stdin', 'r');
+		$line = fgets($stdin);
+		if(strtolower(trim($line)) != 'y'){
+		    echo "Ok, we're done here.\n\n";
+		    exit;
+		} else {
+			echo "\nOK, here we go.\n\n";
+		}
+		fclose($stdin);	
+	}
 }
 
 $counter = 1;

@@ -3,6 +3,7 @@
 function cli_get_arg($arg = false) {
 	$cli_options_short = '?';
 	$cli_options_long = array(
+		'auto' => 'Use a 30 second count down instead of manual confirmations.',
 		'dry-run' => 'Do everything except execute backup and upgrade.',
 		'clean' => 'Delete any WordPress temp files and download a new copy.',
 		'help' => 'Show this message.',
