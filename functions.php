@@ -80,12 +80,16 @@ function cli_get_arg($arg = false) {
 }
 
 
-function site_size($path = false) {
+function site_size($path = false, $du = false) {
 	if(!$path) {
 		return 'Unknown Size';
 	}
 	
-	$du_command = 'du -ksh ' . escapeshellarg($path) . ' 2> /dev/null';
+	if(!$du) {
+		$du = shell_which('du');
+	}
+	
+	$du_command = $du . ' -ksh ' . escapeshellarg($path) . ' 2> /dev/null';
 	$du_output = exec($du_command);
 	$du_output_parts = explode('	', $du_output);
 	$directory_size = $du_output_parts[0];

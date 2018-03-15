@@ -341,7 +341,7 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
 	$wp_upgrade_pretty = substr($wp_upgrade_pretty, 0, -1);
 	$wp_current_version = wp_version_local($wp_upgrade);
-	$wp_size = site_size($wp_upgrade);
+	$wp_size = site_size($wp_upgrade, $exec->du);
 	$wp_db = wp_database($wp_upgrade);
 	
 	$conf_file = fopen($paths->backups . 'tmp_config.cnf', 'w');
