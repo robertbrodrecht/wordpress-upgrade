@@ -1,6 +1,8 @@
 #!/usr/bin/env php
 <?php
 
+$plugin_folder_name = 'classic-editor';
+
 $time_start = time();
 $count_down = 30;
 
@@ -34,29 +36,12 @@ $config_default = (object) array(
 	'paths' => (object) array(
 		'sites' => dirname($script_path) . '/',
 		'backups' => $script_path . 'backups/',
-		'wordpress' => $script_path . 'wordpress/'
+		'wordpress' => $script_path . 'wordpress/',
+		'plugin' => $script_path . $plugin_folder_name
 	)
 );
 
-echo "Loading config...\n";
-if(file_exists($script_path . 'config.json')) {
-	$config = @file_get_contents($script_path . 'config.json');
-	if($config) {
-		$config = @json_decode($config);
-		if($config) {
-			echo "+ Config loaded.\n";
-		} else {
-			echo "+ Could not parse config. Check your syntax.\n\n";
-			exit();
-		}
-	} else {
-		$config = false;
-		echo "+ Could not load config.\n";
-	}	
-} else {
-	$config = false;
-	echo "+ No config file found.\n";
-}
+$config = false;
 
 if(is_object($config)) {
 	echo "+ Applying configuration.\n";
@@ -76,10 +61,6 @@ if(cli_get_arg('single')) {
 		$config->paths->sites = $config->paths->sites . '/';
 	}
 	$config->include = array();
-	$config->exclude = array();
-}
-
-if(cli_get_arg('force')) {
 	$config->exclude = array();
 }
 
@@ -131,90 +112,6 @@ if(!cli_get_arg('no-upgrade') || !cli_get_arg('no-backup')) {
 }
 
 
-
-$wordpress_gzip = $paths->wordpress . 'latest.tar.gz';
-$wordpress_gzip_output = $paths->wordpress . 'wordpress/';
-
-if(cli_get_arg('clean')) {
-	echo "\n";
-	echo "Cleaning up WordPress temporary files...\n";
-	exec('rm -rf ' . $wordpress_gzip_output);
-}
-
-if(
-	(
-		!file_exists($wordpress_gzip_output) || 
-		wp_version_upgradable(wp_version_local($wordpress_gzip_output))
-	) &&
-	!cli_get_arg('no-download')
-) {
-	echo "\n";
-	echo "We need to download WordPress...\n\n";
-	sleep(2);
-	
-	exec(
-		$exec->curl . ' ' . escapeshellarg($wp_latest_url) .
-		' --output ' . escapeshellarg($wordpress_gzip)
-	);
-	
-	echo "\n";
-	
-	if(!file_exists($wordpress_gzip)) {
-		echo "+ CURL did't work. Trying to use PHP's copy.\n";
-		$copy = copy($wp_latest_url, $wordpress_gzip);
-	}
-	
-	if(file_exists($wordpress_gzip)) {
-		chmod($wordpress_gzip, 0777);
-		if(!file_exists($paths->wordpress)) {
-			mkdir($paths->wordpress);
-		}
-		chmod($paths->wordpress, 0777);
-		
-		echo "+ Extracting\n";
-		exec(
-			$exec->tar . ' zxf ' . $wordpress_gzip . ' -C ' . 
-			$paths->wordpress . ' 2> /dev/null', 
-			$res
-		);
-		echo "+ Deleting gzip.\n";
-		unlink($wordpress_gzip);
-		
-		if(!file_exists($wordpress_gzip_output . 'index.php')) {
-			die("- WordPress did not extract.\n");
-		}
-		echo "+ Removing dangerous stuff\n";
-		exec('rm -rf ' . $wordpress_gzip_output . 'wp-content');
-		if(file_exists($wordpress_gzip_output . 'wp-content')) {
-			die("- Could not remove wp-content.\n");
-		}
-	} else {
-		die("- Could not download WordPress.\n");
-	}
-}
-
-$wordpress_local_upgrade_to = wp_version_local($wordpress_gzip_output);
-
-if(
-	!cli_get_arg('no-upgrade') && 
-	wp_version_latest() !== $wordpress_local_upgrade_to
-) {
-	echo wordwrap(
-			"\nVersion " . wp_version_latest() . " is different than the " .
-			"local version {$wordpress_local_upgrade_to}. Try running with " .
-			"--clean to delete local copy fpr a mew download or --version " .
-			"{$wordpress_local_upgrade_to} to force the currently downloaded" .
-			"version.\n\n",
-			80
-		);
-	exit;
-}
-
-if(!cli_get_arg('no-upgrade')) {
-	echo "\n";
-	echo "Latest WordPress is {$wordpress_local_upgrade_to}...\n";
-}
-
 echo "\n";
 echo "Searching for likely WordPress installs...\n";
 
@@ -248,25 +145,12 @@ foreach($wp_config_locations as $wp_config_location) {
 		is_writable($wp_config_location)
 	) {
 		$no_reason = '';
-		foreach($config->exclude as $exclude) {
-			if(strpos($wp_config_location, $exclude) === 0) {
-				$no_reason = 'Excluded';
-			}
-		}
 		
 		$database = wp_database(dirname($wp_config_location) . '/');
 		foreach($database as $k => $v) {
 			if(!$v) {
 				$no_reason = 'Bad wp-config.php';
 			}
-		}
-		
-		$wp_current_version = wp_version_local(
-			dirname($wp_config_location) . '/'
-		);
-		
-		if(!wp_version_upgradable($wp_current_version)) {
-			$no_reason = 'Current';
 		}
 		
 		if(cli_get_arg('no-upgrade') || !$no_reason) {
@@ -285,7 +169,7 @@ if($wp_upgrades) {
 	if(cli_get_arg('no-upgrade')) {
 		echo "Will attempt to examine:\n";
 	} else {
-		echo "Will attempt to upgrade to {$wp_latest}:\n";
+		echo "Will attempt to install plugin:\n";
 	}
 	foreach($wp_upgrades as $wp_upgrade) {
 		$wp_upgrade_pretty = str_replace($paths->sites, '', $wp_upgrade);
@@ -443,23 +327,6 @@ foreach($wp_upgrades as $wp_upgrade) {
 	$html_before = false;
 	$html_before_md5 = false;
 	
-	if(!cli_get_arg('no-upgrade')) {
-		echo "\n";
-		echo "Taking HTML Snapshot...\n";
-		if($site_full_url) {
-			$html_before = @file_get_contents($site_full_url);
-			if($html_before) {
-				$html_before_md5 = md5($html_before);
-				echo "+ Snapshot signature: {$html_before_md5}\n";
-			} else {
-				echo "- Could not get snapshot from '{$site_full_url}'\n";
-			}
-		} else {
-			$html_before = false;
-			echo "- Could not determine URL due to database issues.'\n";
-		}
-	}
-	
 	if(!cli_get_arg('no-backup')) {
 		echo "\n";
 		echo "Backing up database...\n";
@@ -485,34 +352,32 @@ foreach($wp_upgrades as $wp_upgrade) {
 			echo "- Database backup failed.\n";
 		}
 		
-		if(!cli_get_arg('no-backup-files')) {		
-			echo "\n";
-			echo "Backing up files...\n";
-			
-			$folder_name = str_replace(dirname($wp_upgrade), '', $wp_upgrade);
-			$folder_name = trim($folder_name, '/');
-			
-			$tar_results = false;
-			
-			$tar_output = $paths->backups . $file_name . '.tar.gz';
-			$tar_command = $exec->tar . ' -C ' . 
-				escapeshellarg(dirname($wp_upgrade) . '/') .
-				' -czf ' . $tar_output . ' ' . 
-				escapeshellarg($folder_name) . ' 2> /dev/null';
-			
-			if(!cli_get_arg('dry-run')) {
-				@exec($tar_command, $tar_results);
-			}
-			
-			if(
-				(file_exists($tar_output) && filesize($tar_output) > 500) ||
-				cli_get_arg('dry-run')
-			) {
-				$backp_files_success = true;
-				echo "+ Done.\n";
-			} else {
-				echo "- Could not perform backup.\n";
-			}
+		echo "\n";
+		echo "Backing up files...\n";
+		
+		$folder_name = str_replace(dirname($wp_upgrade), '', $wp_upgrade);
+		$folder_name = trim($folder_name, '/');
+		
+		$tar_results = false;
+		
+		$tar_output = $paths->backups . $file_name . '.tar.gz';
+		$tar_command = $exec->tar . ' -C ' . 
+			escapeshellarg(dirname($wp_upgrade) . '/') .
+			' -czf ' . $tar_output . ' ' . 
+			escapeshellarg($folder_name) . ' 2> /dev/null';
+		
+		if(!cli_get_arg('dry-run')) {
+			@exec($tar_command, $tar_results);
+		}
+		
+		if(
+			(file_exists($tar_output) && filesize($tar_output) > 500) ||
+			cli_get_arg('dry-run')
+		) {
+			$backp_files_success = true;
+			echo "+ Done.\n";
+		} else {
+			echo "- Could not perform backup.\n";
 		}
 	} else {
 		$backp_files_success = true;
@@ -526,69 +391,22 @@ foreach($wp_upgrades as $wp_upgrade) {
 		
 	} else if(!cli_get_arg('no-upgrade')) {
 		echo "\n";	
-		echo "Upgrading WordPress\n";
+		echo "Installing plugin\n";
 		
 		
 		$cp_results = false;
-		$cp = $exec->cp . ' -Rf ' . escapeshellarg($wordpress_gzip_output) .  
-			'* ' . escapeshellarg($wp_upgrade);
+		$cp = $exec->cp . ' -Rf ' . escapeshellarg($config_default->paths->plugin) .  
+			' ' . escapeshellarg($wp_upgrade . '/wp-content/plugins/');
 		
 		if(!cli_get_arg('dry-run')) {
 			exec($cp, $cp_results);
-			$wp_upgrade_version = wp_version_local($wp_upgrade);
-		} else {
-			$wp_upgrade_version = wp_version_latest();
 		}
 		
-		if($wp_upgrade_version === $wp_latest) {
+		if(file_exists($wp_upgrade . '/wp-content/plugins/' . $plugin_folder_name)) {
 			echo "+ Complete.\n";
 		} else {
 			$verify[] = $wp_upgrade;
 			echo "- Not 100% sure the upgrade took.\n";
-		}
-		
-		echo "\n";
-		echo "Comparing HTML Snapshot...\n";
-		if($site_full_url && $html_before) {
-			$html_after = @file_get_contents($site_full_url);
-			$html_after_md5 = md5($html_after);
-			
-			$diff = false;
-			
-			echo "+ Snapshot before signature: {$html_before_md5}\n";
-			echo "+ Snapshot after signature: {$html_after_md5}\n";
-			
-			if($html_before_md5 !== $html_after_md5) {
-				echo "+ Snapshot signatures differ.\n";
-				$diff = diff_html($html_before, $html_after);
-			} else {
-				
-			}
-			
-			if($diff === false) {
-				echo "+ No Differences.\n";
-			} else {
-				echo "- Differences found. Before and after files are in the" . 
-					" backups folder for comparison.\n";
-				echo "  First difference starting here:\n";
-				echo "  Before: {$diff[0]}\n";
-				echo "  After: {$diff[1]}\n";
-
-				file_put_contents(
-					$paths->backups . $file_name . '_before.html',
-					$html_after
-				);
-				
-				file_put_contents(
-					$paths->backups . $file_name . '_after.html',
-					$html_after
-				);
-				
-				$verify[] = $wp_upgrade;
-			}
-			
-		} else {
-			echo "- Could not compare due to earlier snapshot failure.\n";			
 		}
 		
 		$success[] = $wp_upgrade;
